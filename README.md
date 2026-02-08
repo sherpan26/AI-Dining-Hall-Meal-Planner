@@ -1,65 +1,49 @@
-[# Dining-Hall-Meal-Planner](https://rutgers-dining.vercel.app/
-
 # Rutgers Dining AI
 
-An AI-powered meal planning and nutrition tracking application for Rutgers University students.
+**Live demo:** https://rutgers-dining.vercel.app
+
+An AI-assisted meal planning and nutrition helper for Rutgers University students.
 
 ## Features
+- **AI Meal Analysis (Gemini):** Estimates calories/macros, returns a health score (1–10), and suggests improvements
+- **Menu Viewer:** Browse dining hall menus with nutritional information
+- **Nutrition Calculator:** Estimate BMR/TDEE and macro targets
+- **Meal Planning:** Build meals aligned with nutrition goals
+- **Local Persistence:** Saves meal plans/history in browser storage (no account required)
 
-- **AI Meal Planner**: Generate personalized meal plans based on dietary preferences and nutritional goals
-- **Menu Viewer**: Browse current dining hall menus with nutritional information
-- **Nutrition Calculator**: Calculate your BMR, TDEE, and macronutrient needs
-- **Meal History**: Track your meals and view nutritional intake over time
-- **Nutrition Dashboard**: Visualize your nutritional data with charts and statistics
-- **AI Recommendations**: Get personalized dining recommendations based on current menus
+## Tech Stack
+- Next.js (App Router)
+- TypeScript
+- Tailwind CSS + shadcn/ui
+- Vercel AI SDK (`ai`, `@ai-sdk/google`)
+- Google Gemini
+- Zod (schema validation)
 
-## Installation
+## Getting Started
 
+### Clone
 ```bash
-# Clone the repository
-git clone https://github.com/yourusername/rutgers-dining-ai.git
+git clone https://github.com/sherpan26/AI-Dining-Hall-Meal-Planner.git
+cd AI-Dining-Hall-Meal-Planner
 
-# Navigate to the project directory
-cd rutgers-dining-ai
-
-# Install dependencies
+Install
+pnpm install
+# or
 npm install
 
-# Start the development server
-npm run dev
-```
+Environment Variables
 
-## Usage
+Create a .env.local file with your Gemini key(s).
+(Confirm exact variable names in lib/api-key-rotation.)
 
-1. Open `http://localhost:3000` in your browser
-2. Navigate between tabs to access different features:
+GOOGLE_GENERATIVE_AI_API_KEY=your_key_here
+# or rotation:
+GOOGLE_API_KEY_1=your_key_here
+GOOGLE_API_KEY_2=your_key_here
+GOOGLE_API_KEY_3=your_key_here
 
-1. Use the Meal Planner to generate personalized meal plans
-2. View current dining hall menus in the View Menu tab
-3. Calculate your nutritional needs in the Nutrition Calculator
-4. Track your meals in the Meal History tab
-5. View your nutrition statistics in the Dashboard
-
+Run
+pnpm dev
 
 
-
-
-## Technologies
-
-- Next.js 14 (App Router)
-- TypeScript
-- Tailwind CSS
-- shadcn/ui components
-- Google Gemini AI API
-- Local Storage for data persistence
-
-
-## License
-
-MIT
-
-```plaintext
-
-```
-
-)
+Open http://localhost:3000
