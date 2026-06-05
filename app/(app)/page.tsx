@@ -8,10 +8,11 @@ import type { MenuItem } from "@/lib/types"
 import type { RecommendedPlate } from "@/lib/ai/plate-schema"
 import { usePrefs, useSavedPlates } from "@/lib/store"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Separator } from "@/components/ui/separator"
 import PreferencesFields, {
   formToPrefs,
   prefsToForm,
@@ -26,6 +27,18 @@ import RecommendationError from "@/components/recommend/RecommendationError"
 function todayMenuDate(): string {
   const d = new Date()
   return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`
+}
+
+/** Numbered section heading used to guide the user through the flow. */
+function StepHeading({ n, title }: { n: number; title: string }) {
+  return (
+    <div className="flex items-center gap-2">
+      <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
+        {n}
+      </span>
+      <h3 className="text-sm font-semibold">{title}</h3>
+    </div>
+  )
 }
 
 export default function HomePage() {
@@ -178,10 +191,12 @@ export default function HomePage() {
       {/* Selector + preferences */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Find your plate</CardTitle>
+          <CardTitle className="text-lg">Build your plate</CardTitle>
+          <CardDescription>Three quick steps to a recommendation from today&apos;s menu.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {/* Hall + meal */}
+          {/* Step 1: hall + meal */}
+          <StepHeading n={1} title="Pick a dining hall & meal" />
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label>Dining hall</Label>
@@ -218,32 +233,32 @@ export default function HomePage() {
 
           {/* Live menu status */}
           {showMenuStatus && (
-            <div className="text-sm">
+            <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
               {isMenuLoading && (
-                <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Loading today&apos;s menu…
                 </span>
               )}
               {!isMenuLoading && menuError && (
                 <span className="flex flex-wrap items-center gap-1.5 text-destructive">
-                  <AlertCircle className="h-3.5 w-3.5" />
+                  <AlertCircle className="h-4 w-4 shrink-0" />
                   Couldn&apos;t load the menu: {menuError}
-                  <button onClick={reloadMenu} className="inline-flex items-center gap-1 underline">
+                  <button onClick={reloadMenu} className="inline-flex items-center gap-1 font-medium underline">
                     <RotateCw className="h-3 w-3" /> Retry
                   </button>
                 </span>
               )}
               {!isMenuLoading && !menuError && menuReady && (
-                <span className="flex items-center gap-1.5 text-muted-foreground">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
-                  Loaded {menuItems.length} live menu items from {hall?.name} · {formatMealPeriod(meal)}
+                <span className="flex items-center gap-2 font-medium text-foreground">
+                  <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
+                  {menuItems.length} items on today&apos;s {formatMealPeriod(meal)} menu at {hall?.name}
                 </span>
               )}
               {!isMenuLoading && !menuError && !menuReady && (
                 <span className="flex flex-wrap items-center gap-1.5 text-muted-foreground">
                   No items found — this meal may not be served right now.
-                  <button onClick={reloadMenu} className="inline-flex items-center gap-1 underline">
+                  <button onClick={reloadMenu} className="inline-flex items-center gap-1 font-medium underline">
                     <RotateCw className="h-3 w-3" /> Retry
                   </button>
                 </span>
@@ -251,19 +266,26 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* Preferences (seeded from saved defaults) */}
+          <Separator />
+
+          {/* Step 2: preferences (seeded from saved defaults) */}
+          <StepHeading n={2} title="Set your preferences" />
           <PreferencesFields value={prefsForm} onChange={setPrefsForm} />
 
           {prefsDirty && (
-            <div className="flex items-center justify-between gap-2 text-sm">
-              <span className="text-muted-foreground">You changed your preferences for this session.</span>
-              <Button variant="ghost" size="sm" onClick={saveAsDefault}>
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/40 px-3 py-2 text-sm">
+              <span className="text-muted-foreground">Using custom preferences for this session.</span>
+              <Button variant="outline" size="sm" onClick={saveAsDefault}>
                 Save as default
               </Button>
             </div>
           )}
 
-          <Button className="w-full gap-2" disabled={!canSubmit} onClick={getRecommendations}>
+          <Separator />
+
+          {/* Step 3: generate */}
+          <StepHeading n={3} title="Get your recommendations" />
+          <Button className="w-full gap-2" size="lg" disabled={!canSubmit} onClick={getRecommendations}>
             {isLoading ? (
               <>
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -276,40 +298,50 @@ export default function HomePage() {
               </>
             )}
           </Button>
+          {!canSubmit && !isLoading && (
+            <p className="text-center text-xs text-muted-foreground">
+              {hallId && meal ? "Waiting for today's menu to load…" : "Choose a dining hall and meal to begin."}
+            </p>
+          )}
         </CardContent>
       </Card>
 
-      {/* Results */}
-      {isLoading && <RecommendationLoading />}
+      {/* Results — the main product moment */}
+      {isLoading && (
+        <section className="space-y-4">
+          <h2 className="text-xl font-bold tracking-tight">Finding your plates…</h2>
+          <RecommendationLoading />
+        </section>
+      )}
 
       {!isLoading && error && <RecommendationError message={error} onRetry={getRecommendations} />}
 
       {!isLoading && !error && plates && plates.length > 0 && (
-        <div className="space-y-8">
+        <section className="space-y-6">
+          <div className="space-y-1">
+            <h2 className="text-xl font-bold tracking-tight">Your recommendations</h2>
+            <p className="text-sm text-muted-foreground">
+              {hall?.name} · {formatMealPeriod(meal)} · tailored to your goal
+            </p>
+          </div>
           <TodaysPick plate={plates[0]} saved={isSaved(plates[0].id)} onToggleSave={toggleSave} />
           <RecommendationGrid plates={plates.slice(1)} isSaved={isSaved} onToggleSave={toggleSave} />
-        </div>
+        </section>
       )}
 
       {!isLoading && !error && !plates && (
-        <section className="space-y-3">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <h2 className="text-lg font-semibold">Today&apos;s Pick</h2>
-            <Badge variant="outline" className="text-[10px]">
-              Preview
-            </Badge>
-          </div>
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-              <p className="font-medium">Your recommendations will appear here</p>
-              <p className="max-w-sm text-sm text-muted-foreground">
-                Choose a hall and meal to load today&apos;s menu, set your goal, then hit Get Recommendations to see
-                three AI-built plates with macros.
-              </p>
-            </CardContent>
-          </Card>
-        </section>
+        <Card className="border-dashed">
+          <CardContent className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+              <Sparkles className="h-5 w-5 text-primary" />
+            </div>
+            <p className="font-medium">Your recommendations will appear here</p>
+            <p className="max-w-sm text-sm text-muted-foreground">
+              Pick a hall and meal to load today&apos;s menu, set your goal, then generate three AI-built plates with
+              full macros.
+            </p>
+          </CardContent>
+        </Card>
       )}
     </div>
   )

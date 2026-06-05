@@ -5,12 +5,17 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
-/** Compact macro line, e.g. "620 cal · 55g protein · 40g carbs · 18g fat". */
-function macroLine(n: PlateNutrition): string {
-  return `${Math.round(n.calories)} cal · ${Math.round(n.protein)}g protein · ${Math.round(
-    n.carbs,
-  )}g carbs · ${Math.round(n.fat)}g fat`
+/** Compact per-item macros, e.g. "220 cal · 25P / 0C / 6F". */
+function itemMacros(n: PlateNutrition): string {
+  return `${Math.round(n.calories)} cal · ${Math.round(n.protein)}P / ${Math.round(n.carbs)}C / ${Math.round(n.fat)}F`
 }
+
+const MACRO_STATS: { key: keyof PlateNutrition; label: string; suffix: string }[] = [
+  { key: "calories", label: "Calories", suffix: "" },
+  { key: "protein", label: "Protein", suffix: "g" },
+  { key: "carbs", label: "Carbs", suffix: "g" },
+  { key: "fat", label: "Fat", suffix: "g" },
+]
 
 interface PlateCardProps {
   plate: RecommendedPlate
@@ -24,34 +29,31 @@ interface PlateCardProps {
 
 export default function PlateCard({ plate, highlight = false, saved = false, onToggleSave }: PlateCardProps) {
   return (
-    <Card className={cn(highlight && "border-primary/50 ring-1 ring-primary/20")}>
-      <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-2">
-          <CardTitle className="text-base">{plate.title}</CardTitle>
-          <div className="flex shrink-0 items-center gap-2">
-            <span className="text-sm font-semibold text-primary">{Math.round(plate.totals.calories)} cal</span>
-            {onToggleSave && (
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-7 w-7"
-                aria-label={saved ? "Remove from saved" : "Save plate"}
-                aria-pressed={saved}
-                onClick={() => onToggleSave(plate)}
-              >
-                {saved ? (
-                  <BookmarkCheck className="h-4 w-4 text-primary" />
-                ) : (
-                  <Bookmark className="h-4 w-4 text-muted-foreground" />
-                )}
-              </Button>
-            )}
-          </div>
+    <Card className={cn("flex flex-col", highlight && "border-primary/60 shadow-sm ring-1 ring-primary/20")}>
+      <CardHeader className="gap-2 pb-3">
+        <div className="flex items-start justify-between gap-3">
+          <CardTitle className="min-w-0 text-base leading-snug">{plate.title}</CardTitle>
+          {onToggleSave && (
+            <Button
+              variant={saved ? "secondary" : "ghost"}
+              size="icon"
+              className="h-8 w-8 shrink-0"
+              aria-label={saved ? "Remove from saved" : "Save plate"}
+              aria-pressed={saved}
+              onClick={() => onToggleSave(plate)}
+            >
+              {saved ? (
+                <BookmarkCheck className="h-4 w-4 text-primary" />
+              ) : (
+                <Bookmark className="h-4 w-4 text-muted-foreground" />
+              )}
+            </Button>
+          )}
         </div>
         {plate.tags.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pt-1">
+          <div className="flex flex-wrap gap-1.5">
             {plate.tags.map((tag) => (
-              <Badge key={tag} variant="secondary" className="text-[10px] font-normal">
+              <Badge key={tag} variant="outline" className="rounded-full text-[10px] font-normal">
                 {tag}
               </Badge>
             ))}
@@ -59,22 +61,39 @@ export default function PlateCard({ plate, highlight = false, saved = false, onT
         )}
       </CardHeader>
 
-      <CardContent className="space-y-3">
-        <ul className="space-y-1.5">
+      <CardContent className="flex flex-1 flex-col gap-4">
+        {/* Items */}
+        <ul className="divide-y rounded-md border">
           {plate.items.map((item, i) => (
-            <li key={`${item.name}-${i}`} className="flex items-baseline justify-between gap-3 text-sm">
-              <span className="font-medium">{item.name}</span>
-              <span className="shrink-0 text-xs text-muted-foreground">{macroLine(item.nutrition)}</span>
+            <li key={`${item.name}-${i}`} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
+              <span className="min-w-0 truncate font-medium">{item.name}</span>
+              <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
+                {itemMacros(item.nutrition)}
+              </span>
             </li>
           ))}
         </ul>
 
-        <div className="rounded-md bg-muted px-3 py-2 text-xs font-medium">Total: {macroLine(plate.totals)}</div>
+        {/* Plate totals */}
+        <div className="space-y-1.5">
+          <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Plate total</p>
+          <div className="grid grid-cols-4 gap-2">
+            {MACRO_STATS.map((m) => (
+              <div key={m.key} className="rounded-md bg-muted py-2 text-center">
+                <div className="text-sm font-semibold tabular-nums">
+                  {Math.round(plate.totals[m.key])}
+                  {m.suffix}
+                </div>
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{m.label}</div>
+              </div>
+            ))}
+          </div>
+        </div>
 
         {plate.rationale && <p className="text-sm text-muted-foreground">{plate.rationale}</p>}
 
         {plate.warnings.length > 0 && (
-          <div className="flex items-start gap-1.5 text-xs text-amber-600 dark:text-amber-500">
+          <div className="mt-auto flex items-start gap-1.5 rounded-md bg-amber-50 px-2.5 py-1.5 text-xs text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>{plate.warnings.join(" · ")}</span>
           </div>

@@ -10,7 +10,7 @@ import PreferencesFields, {
   type PrefsFormState,
 } from "@/components/settings/PreferencesFields"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function SettingsPage() {
   const { prefs, setPrefs, resetPrefs } = usePrefs()
@@ -46,15 +46,18 @@ export default function SettingsPage() {
             <SettingsIcon className="h-4 w-4" />
             Preferences
           </CardTitle>
+          <CardDescription>These apply to every new recommendation, and pre-fill the home page.</CardDescription>
         </CardHeader>
         <CardContent>
           <PreferencesFields value={form} onChange={setForm} />
         </CardContent>
-        <CardFooter className="justify-end gap-2">
-          <Button variant="ghost" onClick={reset}>
+        <CardFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <Button variant="ghost" className="w-full sm:w-auto" onClick={reset}>
             Reset to defaults
           </Button>
-          <Button onClick={save}>Save preferences</Button>
+          <Button className="w-full sm:w-auto" onClick={save}>
+            Save preferences
+          </Button>
         </CardFooter>
       </Card>
     </div>
