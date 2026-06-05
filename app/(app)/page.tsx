@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import { Sparkles, ArrowRight, Loader2, CheckCircle2, AlertCircle, RotateCw } from "lucide-react"
+import { Sparkles, ArrowRight, Loader2, MapPin, Dumbbell, Utensils, Clock } from "lucide-react"
 import { DINING_HALLS, getDiningHallById, formatMealPeriod } from "@/lib/dining-halls"
 import type { MenuItem } from "@/lib/types"
 import type { RecommendedPlate } from "@/lib/ai/plate-schema"
@@ -21,6 +21,13 @@ import TodaysPick from "@/components/recommend/TodaysPick"
 import RecommendationGrid from "@/components/recommend/RecommendationGrid"
 import RecommendationLoading from "@/components/recommend/RecommendationLoading"
 import RecommendationError from "@/components/recommend/RecommendationError"
+import {
+  LiveMenuCard,
+  HowItWorksCard,
+  DiningHallsCard,
+  SavedCallout,
+  TrustBadge,
+} from "@/components/home/sidebar"
 
 /** Format today's date the way /api/menu expects: M/D/YYYY. */
 function todayMenuDate(): string {
@@ -28,17 +35,32 @@ function todayMenuDate(): string {
   return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`
 }
 
-/** Numbered section heading used to guide the user through the flow. */
-function StepHeading({ n, title }: { n: number; title: string }) {
+/** Numbered, icon-led section heading used to guide the user through the flow. */
+function StepHeading({
+  n,
+  title,
+  icon: Icon,
+}: {
+  n: number
+  title: string
+  icon: React.ComponentType<{ className?: string }>
+}) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2.5">
       <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
         {n}
       </span>
+      <Icon className="h-4 w-4 text-primary" />
       <h3 className="text-sm font-semibold">{title}</h3>
     </div>
   )
 }
+
+const HERO_FEATURES = [
+  { icon: Utensils, label: "4 dining halls" },
+  { icon: Clock, label: "Today's live menus" },
+  { icon: Dumbbell, label: "Macro-aware picks" },
+]
 
 export default function HomePage() {
   // Selection
@@ -55,7 +77,6 @@ export default function HomePage() {
   const { prefs, setPrefs } = usePrefs()
   const [prefsForm, setPrefsForm] = useState<PrefsFormState>(() => prefsToForm(prefs))
 
-  // Re-seed the form when stored prefs change (hydration, saved in Settings, other tab).
   useEffect(() => {
     setPrefsForm(prefsToForm(prefs))
   }, [prefs])
@@ -70,7 +91,8 @@ export default function HomePage() {
 
   const hall = getDiningHallById(hallId)
   const menuReady = menuItems.length > 0
-  const canSubmit = Boolean(hallId && meal && menuReady) && !isLoading && !isMenuLoading
+  const hasSelection = Boolean(hallId && meal)
+  const canSubmit = Boolean(hasSelection && menuReady) && !isLoading && !isMenuLoading
 
   const prefsDirty = JSON.stringify(formToPrefs(prefsForm)) !== JSON.stringify(prefs)
 
@@ -170,191 +192,197 @@ export default function HomePage() {
     }
   }
 
-  const showMenuStatus = Boolean(hallId && meal)
+  const disabledHint = !hallId || !meal
+    ? "Choose a dining hall and meal to begin."
+    : menuError
+      ? "Couldn't load the menu — check the Live menu panel."
+      : "Loading today's menu…"
 
   return (
-    <div className="space-y-10">
-      {/* Hero */}
-      <section className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary via-[#9b0026] to-zinc-900 px-6 py-12 text-center text-white shadow-sm sm:py-16">
-        {/* Decorative shapes */}
-        <div aria-hidden className="pointer-events-none absolute -left-16 -top-20 h-52 w-52 rounded-full bg-white/10 blur-3xl" />
-        <div aria-hidden className="pointer-events-none absolute -bottom-24 -right-12 h-60 w-60 rounded-full bg-black/30 blur-3xl" />
-        <div className="relative mx-auto max-w-2xl space-y-4">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur">
-            <Sparkles className="h-3.5 w-3.5" />
-            Rutgers–New Brunswick · AI Dining Concierge
-          </span>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">What should you eat on campus today?</h1>
-          <p className="mx-auto max-w-xl text-pretty text-white/80">
-            AI-recommended plates with full macros, built from today&apos;s live dining hall menus across Rutgers–New
-            Brunswick.
-          </p>
-          <div className="flex flex-wrap justify-center gap-2 pt-1 text-xs text-white/90">
-            {["Busch", "Livingston", "Neilson", "The Atrium"].map((hall) => (
-              <span key={hall} className="rounded-full bg-white/10 px-2.5 py-1 backdrop-blur">
-                {hall}
-              </span>
-            ))}
+    <div className="space-y-8">
+      {/* Hero — landing-style */}
+      <section className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary via-[#9b0026] to-zinc-900 text-white shadow-sm">
+        <div aria-hidden className="pointer-events-none absolute -left-16 -top-24 h-56 w-56 rounded-full bg-white/10 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-24 right-10 h-64 w-64 rounded-full bg-black/30 blur-3xl" />
+        <div className="relative grid gap-8 px-6 py-10 sm:px-10 sm:py-12 lg:grid-cols-[1.5fr_1fr] lg:items-center">
+          <div className="space-y-4">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur">
+              <MapPin className="h-3.5 w-3.5" />
+              Rutgers–New Brunswick
+            </span>
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">What should you eat on campus today?</h1>
+            <p className="max-w-xl text-pretty text-white/80">
+              Your AI dining concierge picks balanced plates with full macros from today&apos;s live dining hall
+              menus — tailored to your goal and dietary needs.
+            </p>
+            <div className="flex flex-wrap gap-2 pt-1 text-xs text-white/90">
+              {["Busch", "Livingston", "Neilson", "The Atrium"].map((h) => (
+                <span key={h} className="rounded-full bg-white/10 px-2.5 py-1 backdrop-blur">
+                  {h}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Decorative feature panel */}
+          <div className="hidden lg:block">
+            <div className="space-y-3 rounded-xl border border-white/15 bg-white/10 p-5 backdrop-blur">
+              {HERO_FEATURES.map((f) => (
+                <div key={f.label} className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white/15">
+                    <f.icon className="h-4 w-4" />
+                  </div>
+                  <span className="text-sm font-medium">{f.label}</span>
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </section>
 
-      {/* Selector + preferences */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Build your plate</CardTitle>
-          <CardDescription>Three quick steps to a recommendation from today&apos;s menu.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Step 1: hall + meal */}
-          <StepHeading n={1} title="Pick a dining hall & meal" />
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label>Dining hall</Label>
-              <Select value={hallId} onValueChange={handleHallChange}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select a dining hall" />
-                </SelectTrigger>
-                <SelectContent>
-                  {DINING_HALLS.map((h) => (
-                    <SelectItem key={h.id} value={h.id}>
-                      {h.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      {/* Dashboard: main flow + context sidebar */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        {/* Main */}
+        <div className="space-y-6 lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-lg">Build your plate</CardTitle>
+              <CardDescription>Three quick steps to a recommendation from today&apos;s menu.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Step 1: hall + meal */}
+              <StepHeading n={1} title="Pick a dining hall & meal" icon={MapPin} />
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label>Dining hall</Label>
+                  <Select value={hallId} onValueChange={handleHallChange}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a dining hall" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DINING_HALLS.map((h) => (
+                        <SelectItem key={h.id} value={h.id}>
+                          {h.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
 
-            <div className="space-y-1.5">
-              <Label>Meal</Label>
-              <Select value={meal} onValueChange={setMeal} disabled={!hall}>
-                <SelectTrigger>
-                  <SelectValue placeholder={hall ? "Select a meal" : "Pick a hall first"} />
-                </SelectTrigger>
-                <SelectContent>
-                  {hall?.mealPeriods.map((period) => (
-                    <SelectItem key={period} value={period}>
-                      {formatMealPeriod(period)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
+                <div className="space-y-1.5">
+                  <Label>Meal</Label>
+                  <Select value={meal} onValueChange={setMeal} disabled={!hall}>
+                    <SelectTrigger>
+                      <SelectValue placeholder={hall ? "Select a meal" : "Pick a hall first"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {hall?.mealPeriods.map((period) => (
+                        <SelectItem key={period} value={period}>
+                          {formatMealPeriod(period)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
 
-          {/* Live menu status */}
-          {showMenuStatus && (
-            <div className="rounded-md border bg-muted/40 px-3 py-2 text-sm">
-              {isMenuLoading && (
-                <span className="flex items-center gap-2 text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading today&apos;s menu…
-                </span>
+              <Separator />
+
+              {/* Step 2: preferences */}
+              <StepHeading n={2} title="Set your preferences" icon={Dumbbell} />
+              <PreferencesFields value={prefsForm} onChange={setPrefsForm} />
+
+              {prefsDirty && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/60 px-3 py-2 text-sm">
+                  <span className="text-muted-foreground">Using custom preferences for this session.</span>
+                  <Button variant="outline" size="sm" onClick={saveAsDefault}>
+                    Save as default
+                  </Button>
+                </div>
               )}
-              {!isMenuLoading && menuError && (
-                <span className="flex flex-wrap items-center gap-1.5 text-destructive">
-                  <AlertCircle className="h-4 w-4 shrink-0" />
-                  Couldn&apos;t load the menu: {menuError}
-                  <button onClick={reloadMenu} className="inline-flex items-center gap-1 font-medium underline">
-                    <RotateCw className="h-3 w-3" /> Retry
-                  </button>
-                </span>
-              )}
-              {!isMenuLoading && !menuError && menuReady && (
-                <span className="flex items-center gap-2 font-medium text-foreground">
-                  <CheckCircle2 className="h-4 w-4 shrink-0 text-green-600" />
-                  {menuItems.length} items on today&apos;s {formatMealPeriod(meal)} menu at {hall?.name}
-                </span>
-              )}
-              {!isMenuLoading && !menuError && !menuReady && (
-                <span className="flex flex-wrap items-center gap-1.5 text-muted-foreground">
-                  No items found — this meal may not be served right now.
-                  <button onClick={reloadMenu} className="inline-flex items-center gap-1 font-medium underline">
-                    <RotateCw className="h-3 w-3" /> Retry
-                  </button>
-                </span>
-              )}
-            </div>
-          )}
 
-          <Separator />
+              <Separator />
 
-          {/* Step 2: preferences (seeded from saved defaults) */}
-          <StepHeading n={2} title="Set your preferences" />
-          <PreferencesFields value={prefsForm} onChange={setPrefsForm} />
-
-          {prefsDirty && (
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/40 px-3 py-2 text-sm">
-              <span className="text-muted-foreground">Using custom preferences for this session.</span>
-              <Button variant="outline" size="sm" onClick={saveAsDefault}>
-                Save as default
+              {/* Step 3: generate */}
+              <StepHeading n={3} title="Get your recommendations" icon={Sparkles} />
+              <Button className="w-full gap-2 shadow-sm" size="lg" disabled={!canSubmit} onClick={getRecommendations}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Generating…
+                  </>
+                ) : (
+                  <>
+                    Get Recommendations
+                    <ArrowRight className="h-4 w-4" />
+                  </>
+                )}
               </Button>
-            </div>
+              {!canSubmit && !isLoading && (
+                <p className="text-center text-xs text-muted-foreground">{disabledHint}</p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Results — the main product moment */}
+          {isLoading && (
+            <section className="space-y-4">
+              <h2 className="text-xl font-bold tracking-tight">Finding your plates…</h2>
+              <RecommendationLoading />
+            </section>
           )}
 
-          <Separator />
+          {!isLoading && error && <RecommendationError message={error} onRetry={getRecommendations} />}
 
-          {/* Step 3: generate */}
-          <StepHeading n={3} title="Get your recommendations" />
-          <Button className="w-full gap-2" size="lg" disabled={!canSubmit} onClick={getRecommendations}>
-            {isLoading ? (
-              <>
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Generating…
-              </>
-            ) : (
-              <>
-                Get Recommendations
-                <ArrowRight className="h-4 w-4" />
-              </>
-            )}
-          </Button>
-          {!canSubmit && !isLoading && (
-            <p className="text-center text-xs text-muted-foreground">
-              {hallId && meal ? "Waiting for today's menu to load…" : "Choose a dining hall and meal to begin."}
-            </p>
+          {!isLoading && !error && plates && plates.length > 0 && (
+            <section className="space-y-6">
+              <div className="space-y-1">
+                <p className="text-xs font-semibold uppercase tracking-wide text-primary">Your picks</p>
+                <h2 className="text-xl font-bold tracking-tight">Your recommendations</h2>
+                <p className="text-sm text-muted-foreground">
+                  {hall?.name} · {formatMealPeriod(meal)} · tailored to your goal
+                </p>
+              </div>
+              <TodaysPick plate={plates[0]} saved={isSaved(plates[0].id)} onToggleSave={toggleSave} />
+              <RecommendationGrid plates={plates.slice(1)} isSaved={isSaved} onToggleSave={toggleSave} />
+            </section>
           )}
-        </CardContent>
-      </Card>
 
-      {/* Results — the main product moment */}
-      {isLoading && (
-        <section className="space-y-4">
-          <h2 className="text-xl font-bold tracking-tight">Finding your plates…</h2>
-          <RecommendationLoading />
-        </section>
-      )}
+          {!isLoading && !error && !plates && (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center gap-3 py-14 text-center">
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
+                  <Sparkles className="h-6 w-6 text-primary" />
+                </div>
+                <div className="space-y-1">
+                  <p className="font-medium">Your recommendations will appear here</p>
+                  <p className="mx-auto max-w-sm text-sm text-muted-foreground">
+                    Pick a hall and meal to load today&apos;s menu, set your goal, then generate three AI-built plates
+                    with full macros.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+        </div>
 
-      {!isLoading && error && <RecommendationError message={error} onRetry={getRecommendations} />}
-
-      {!isLoading && !error && plates && plates.length > 0 && (
-        <section className="space-y-6">
-          <div className="space-y-1">
-            <p className="text-xs font-semibold uppercase tracking-wide text-primary">Your picks</p>
-            <h2 className="text-xl font-bold tracking-tight">Your recommendations</h2>
-            <p className="text-sm text-muted-foreground">
-              {hall?.name} · {formatMealPeriod(meal)} · tailored to your goal
-            </p>
-          </div>
-          <TodaysPick plate={plates[0]} saved={isSaved(plates[0].id)} onToggleSave={toggleSave} />
-          <RecommendationGrid plates={plates.slice(1)} isSaved={isSaved} onToggleSave={toggleSave} />
-        </section>
-      )}
-
-      {!isLoading && !error && !plates && (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center gap-2 py-12 text-center">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-              <Sparkles className="h-5 w-5 text-primary" />
-            </div>
-            <p className="font-medium">Your recommendations will appear here</p>
-            <p className="max-w-sm text-sm text-muted-foreground">
-              Pick a hall and meal to load today&apos;s menu, set your goal, then generate three AI-built plates with
-              full macros.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+        {/* Context sidebar */}
+        <aside className="space-y-4 lg:col-span-1">
+          <LiveMenuCard
+            hasSelection={hasSelection}
+            hallName={hall?.name}
+            mealLabel={meal ? formatMealPeriod(meal) : undefined}
+            count={menuItems.length}
+            isLoading={isMenuLoading}
+            error={menuError}
+            onRetry={reloadMenu}
+          />
+          <HowItWorksCard />
+          <DiningHallsCard />
+          <SavedCallout />
+          <TrustBadge />
+        </aside>
+      </div>
     </div>
   )
 }

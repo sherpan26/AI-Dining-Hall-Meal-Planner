@@ -29,7 +29,7 @@ export default function TopNav() {
     <header className="sticky top-0 z-40 w-full border-b border-border/70 bg-background/80 backdrop-blur">
       {/* Scarlet brand line */}
       <div className="h-1 w-full bg-primary" />
-      <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
+      <div className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4">
         <Link href="/" className="flex items-center gap-2.5">
           <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-sm font-extrabold tracking-tight text-primary-foreground shadow-sm">
             RU
