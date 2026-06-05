@@ -7,7 +7,7 @@
  */
 
 import { formatMealPeriod, type DiningHall } from "@/lib/dining-halls"
-import type { MenuItem, UserPrefs } from "@/lib/types"
+import type { MacroTargets, MenuItem, UserPrefs } from "@/lib/types"
 
 /** Default cap on the number of menu items sent to the model. */
 export const DEFAULT_MENU_ITEM_LIMIT = 60
@@ -16,6 +16,7 @@ const GOAL_LABELS: Record<UserPrefs["goal"], string> = {
   lose: "lose weight (favor lower-calorie, high-volume, high-protein choices)",
   maintain: "maintain weight (balanced choices)",
   gain: "gain weight (higher-calorie, calorie-dense choices)",
+  muscle: "build muscle (higher protein with enough calories to support training)",
   protein: "maximize protein intake",
 }
 
@@ -25,6 +26,8 @@ export interface RecommendPromptInput {
   meal: string
   menuItems: MenuItem[]
   prefs: UserPrefs
+  /** Optional estimated daily targets to anchor the meal's macros. */
+  macroTargets?: MacroTargets
   /** Optional extra filter labels selected in the UI (e.g. "high-protein"). */
   filters?: string[]
   /** Max menu items to include in the prompt. */
@@ -63,18 +66,29 @@ export function summarizeMenu(menuItems: MenuItem[], limit: number = DEFAULT_MEN
 
 /** Build the structured-output prompt asking Gemini for 3 plates from the real menu. */
 export function buildRecommendationPrompt(input: RecommendPromptInput): string {
-  const { hall, meal, menuItems, prefs, filters, menuItemLimit } = input
+  const { hall, meal, menuItems, prefs, macroTargets, filters, menuItemLimit } = input
 
   const prefLines: string[] = [
     `- Goal: ${GOAL_LABELS[prefs.goal] ?? prefs.goal}`,
     `- Dietary restrictions: ${prefs.diets.length ? prefs.diets.join(", ") : "none"}`,
     `- Foods to avoid: ${prefs.avoid.length ? prefs.avoid.join(", ") : "none"}`,
   ]
-  if (typeof prefs.calorieTarget === "number") {
-    prefLines.push(`- Approx. calorie target for this meal: ${prefs.calorieTarget}`)
-  }
   if (filters?.length) {
     prefLines.push(`- Additional filters: ${filters.join(", ")}`)
+  }
+
+  // Anchor the meal to roughly one-third of estimated daily targets.
+  let targetLines = ""
+  if (macroTargets) {
+    const perMeal = (n: number) => Math.round(n / 3)
+    targetLines = [
+      ``,
+      `Estimated daily targets (a single meal should cover roughly one-third):`,
+      `- Daily: ~${macroTargets.calories} kcal, ${macroTargets.protein}g protein, ${macroTargets.carbs}g carbs, ${macroTargets.fat}g fat`,
+      `- This meal (~1/3): ~${perMeal(macroTargets.calories)} kcal, ${perMeal(macroTargets.protein)}g protein, ${perMeal(
+        macroTargets.carbs,
+      )}g carbs, ${perMeal(macroTargets.fat)}g fat`,
+    ].join("\n")
   }
 
   const menuSummary = summarizeMenu(menuItems, menuItemLimit)
@@ -86,6 +100,7 @@ export function buildRecommendationPrompt(input: RecommendPromptInput): string {
     ``,
     `Student preferences:`,
     prefLines.join("\n"),
+    targetLines,
     ``,
     `Today's menu (use ONLY these items — do not invent dishes):`,
     menuSummary,
@@ -94,8 +109,8 @@ export function buildRecommendationPrompt(input: RecommendPromptInput): string {
     `- Each plate must use 1-6 items, taken verbatim from the menu above.`,
     `- Respect the dietary restrictions and avoid list strictly.`,
     `- Estimate realistic nutrition (calories/protein/carbs/fat) for each item and provide accurate plate totals.`,
-    `- Bias choices toward the student's goal.`,
+    `- Bias choices toward the student's goal and the per-meal targets above.`,
+    `- Each rationale (1-2 sentences) must explain how the plate supports the student's goal.`,
     `- Add concise tags (e.g. "high-protein", "vegetarian") and any relevant allergen/diet warnings.`,
-    `- Keep each rationale to 1-2 sentences.`,
   ].join("\n")
 }

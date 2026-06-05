@@ -2,17 +2,35 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
-import { Sparkles, ArrowRight, Loader2, MapPin, Dumbbell, Utensils, Clock } from "lucide-react"
+import {
+  Sparkles,
+  ArrowRight,
+  Loader2,
+  MapPin,
+  Dumbbell,
+  Utensils,
+  Clock,
+  Target,
+  Leaf,
+  Flame,
+  Soup,
+  WheatOff,
+} from "lucide-react"
 import { DINING_HALLS, getDiningHallById, formatMealPeriod } from "@/lib/dining-halls"
 import type { MenuItem } from "@/lib/types"
 import type { RecommendedPlate } from "@/lib/ai/plate-schema"
 import { usePrefs, useSavedPlates } from "@/lib/store"
+import { estimateTargets, hasProfileForCalc } from "@/lib/nutrition/targets"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Separator } from "@/components/ui/separator"
-import PreferencesFields, {
+import { cn } from "@/lib/utils"
+import {
+  GoalSelect,
+  ProfileFields,
+  DietChips,
+  AvoidInput,
   formToPrefs,
   prefsToForm,
   type PrefsFormState,
@@ -22,8 +40,8 @@ import RecommendationGrid from "@/components/recommend/RecommendationGrid"
 import RecommendationLoading from "@/components/recommend/RecommendationLoading"
 import RecommendationError from "@/components/recommend/RecommendationError"
 import {
+  MacroTargetCard,
   LiveMenuCard,
-  HowItWorksCard,
   DiningHallsCard,
   SavedCallout,
   TrustBadge,
@@ -35,8 +53,22 @@ function todayMenuDate(): string {
   return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`
 }
 
-/** Numbered, icon-led section heading used to guide the user through the flow. */
-function StepHeading({
+const QUICK_FILTERS: { id: string; label: string; icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: "high protein", label: "High protein", icon: Dumbbell },
+  { id: "lower calorie", label: "Lower calorie", icon: Flame },
+  { id: "vegetarian", label: "Vegetarian", icon: Leaf },
+  { id: "comfort food", label: "Comfort", icon: Soup },
+  { id: "gluten-free", label: "Gluten-free", icon: WheatOff },
+]
+
+const HERO_FEATURES = [
+  { icon: Utensils, label: "4 dining halls" },
+  { icon: Clock, label: "Today's live menus" },
+  { icon: Target, label: "Goal-matched plates" },
+]
+
+/** Numbered, icon-led card header. */
+function StepTitle({
   n,
   title,
   icon: Icon,
@@ -51,16 +83,10 @@ function StepHeading({
         {n}
       </span>
       <Icon className="h-4 w-4 text-primary" />
-      <h3 className="text-sm font-semibold">{title}</h3>
+      <h2 className="text-base font-semibold">{title}</h2>
     </div>
   )
 }
-
-const HERO_FEATURES = [
-  { icon: Utensils, label: "4 dining halls" },
-  { icon: Clock, label: "Today's live menus" },
-  { icon: Dumbbell, label: "Macro-aware picks" },
-]
 
 export default function HomePage() {
   // Selection
@@ -81,6 +107,9 @@ export default function HomePage() {
     setPrefsForm(prefsToForm(prefs))
   }, [prefs])
 
+  // Quick filters (session only)
+  const [filters, setFilters] = useState<string[]>([])
+
   // Saved plates (localStorage)
   const { savePlate, removePlate, isSaved } = useSavedPlates()
 
@@ -94,15 +123,28 @@ export default function HomePage() {
   const hasSelection = Boolean(hallId && meal)
   const canSubmit = Boolean(hasSelection && menuReady) && !isLoading && !isMenuLoading
 
-  const prefsDirty = JSON.stringify(formToPrefs(prefsForm)) !== JSON.stringify(prefs)
+  // Derived preferences + estimated targets (recomputed as the form changes).
+  const currentPrefs = formToPrefs(prefsForm)
+  const targets = estimateTargets(currentPrefs.goal, currentPrefs.profile, currentPrefs.calorieTarget)
+  const targetNote =
+    targets.source === "manual"
+      ? "Based on your calorie target"
+      : hasProfileForCalc(currentPrefs.profile)
+        ? "From your profile & goal"
+        : "From your goal"
+  const prefsDirty = JSON.stringify(currentPrefs) !== JSON.stringify(prefs)
 
   const handleHallChange = (value: string) => {
     setHallId(value)
     setMeal("")
   }
 
+  const toggleFilter = (id: string) => {
+    setFilters((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]))
+  }
+
   const saveAsDefault = () => {
-    setPrefs(formToPrefs(prefsForm))
+    setPrefs(currentPrefs)
     toast.success("Saved as your default preferences")
   }
 
@@ -178,7 +220,9 @@ export default function HomePage() {
           hall: hallId,
           meal,
           menuItems,
-          userPrefs: formToPrefs(prefsForm),
+          userPrefs: currentPrefs,
+          macroTargets: targets,
+          filters,
         }),
       })
 
@@ -193,7 +237,7 @@ export default function HomePage() {
   }
 
   const disabledHint = !hallId || !meal
-    ? "Choose a dining hall and meal to begin."
+    ? "Pick a dining hall and meal to load today's menu."
     : menuError
       ? "Couldn't load the menu — check the Live menu panel."
       : "Loading today's menu…"
@@ -210,10 +254,10 @@ export default function HomePage() {
               <MapPin className="h-3.5 w-3.5" />
               Rutgers–New Brunswick
             </span>
-            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">What should you eat on campus today?</h1>
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">Eat for your goals on campus.</h1>
             <p className="max-w-xl text-pretty text-white/80">
-              Your AI dining concierge picks balanced plates with full macros from today&apos;s live dining hall
-              menus — tailored to your goal and dietary needs.
+              Tell us your goal, then get AI-built dining hall plates with full macros from today&apos;s live menus —
+              matched to how you want to eat.
             </p>
             <div className="flex flex-wrap gap-2 pt-1 text-xs text-white/90">
               {["Busch", "Livingston", "Neilson", "The Atrium"].map((h) => (
@@ -224,7 +268,6 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Decorative feature panel */}
           <div className="hidden lg:block">
             <div className="space-y-3 rounded-xl border border-white/15 bg-white/10 p-5 backdrop-blur">
               {HERO_FEATURES.map((f) => (
@@ -244,14 +287,23 @@ export default function HomePage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main */}
         <div className="space-y-6 lg:col-span-2">
+          {/* Step 1: personalize */}
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Build your plate</CardTitle>
-              <CardDescription>Three quick steps to a recommendation from today&apos;s menu.</CardDescription>
+              <StepTitle n={1} title="Personalize your plate" icon={Target} />
             </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Step 1: hall + meal */}
-              <StepHeading n={1} title="Pick a dining hall & meal" icon={MapPin} />
+            <CardContent className="space-y-5">
+              <GoalSelect value={prefsForm} onChange={setPrefsForm} />
+              <ProfileFields value={prefsForm} onChange={setPrefsForm} />
+            </CardContent>
+          </Card>
+
+          {/* Step 2: hall + meal */}
+          <Card>
+            <CardHeader>
+              <StepTitle n={2} title="Pick a dining hall & meal" icon={MapPin} />
+            </CardHeader>
+            <CardContent>
               <div className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-1.5">
                   <Label>Dining hall</Label>
@@ -268,7 +320,6 @@ export default function HomePage() {
                     </SelectContent>
                   </Select>
                 </div>
-
                 <div className="space-y-1.5">
                   <Label>Meal</Label>
                   <Select value={meal} onValueChange={setMeal} disabled={!hall}>
@@ -285,44 +336,71 @@ export default function HomePage() {
                   </Select>
                 </div>
               </div>
-
-              <Separator />
-
-              {/* Step 2: preferences */}
-              <StepHeading n={2} title="Set your preferences" icon={Dumbbell} />
-              <PreferencesFields value={prefsForm} onChange={setPrefsForm} />
-
-              {prefsDirty && (
-                <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/60 px-3 py-2 text-sm">
-                  <span className="text-muted-foreground">Using custom preferences for this session.</span>
-                  <Button variant="outline" size="sm" onClick={saveAsDefault}>
-                    Save as default
-                  </Button>
-                </div>
-              )}
-
-              <Separator />
-
-              {/* Step 3: generate */}
-              <StepHeading n={3} title="Get your recommendations" icon={Sparkles} />
-              <Button className="w-full gap-2 shadow-sm" size="lg" disabled={!canSubmit} onClick={getRecommendations}>
-                {isLoading ? (
-                  <>
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    Generating…
-                  </>
-                ) : (
-                  <>
-                    Get Recommendations
-                    <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </Button>
-              {!canSubmit && !isLoading && (
-                <p className="text-center text-xs text-muted-foreground">{disabledHint}</p>
-              )}
             </CardContent>
           </Card>
+
+          {/* Step 3: preferences + filters */}
+          <Card>
+            <CardHeader>
+              <StepTitle n={3} title="Preferences & filters" icon={Leaf} />
+            </CardHeader>
+            <CardContent className="space-y-5">
+              <DietChips value={prefsForm} onChange={setPrefsForm} />
+              <AvoidInput value={prefsForm} onChange={setPrefsForm} />
+              <div className="space-y-1.5">
+                <Label>Quick filters</Label>
+                <div className="flex flex-wrap gap-2">
+                  {QUICK_FILTERS.map((f) => {
+                    const active = filters.includes(f.id)
+                    return (
+                      <button
+                        key={f.id}
+                        type="button"
+                        onClick={() => toggleFilter(f.id)}
+                        aria-pressed={active}
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm transition-colors",
+                          active
+                            ? "border-primary bg-primary text-primary-foreground"
+                            : "border-input bg-background hover:bg-muted",
+                        )}
+                      >
+                        <f.icon className="h-3.5 w-3.5" />
+                        {f.label}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* CTA */}
+          <div className="space-y-2">
+            {prefsDirty && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/60 px-3 py-2 text-sm">
+                <span className="text-muted-foreground">Using custom preferences for this session.</span>
+                <Button variant="outline" size="sm" onClick={saveAsDefault}>
+                  Save as default
+                </Button>
+              </div>
+            )}
+            <Button className="w-full gap-2 shadow-sm" size="lg" disabled={!canSubmit} onClick={getRecommendations}>
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Generating…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="h-4 w-4" />
+                  Get Recommendations
+                  <ArrowRight className="h-4 w-4" />
+                </>
+              )}
+            </Button>
+            {!canSubmit && !isLoading && <p className="text-center text-xs text-muted-foreground">{disabledHint}</p>}
+          </div>
 
           {/* Results — the main product moment */}
           {isLoading && (
@@ -357,8 +435,7 @@ export default function HomePage() {
                 <div className="space-y-1">
                   <p className="font-medium">Your recommendations will appear here</p>
                   <p className="mx-auto max-w-sm text-sm text-muted-foreground">
-                    Pick a hall and meal to load today&apos;s menu, set your goal, then generate three AI-built plates
-                    with full macros.
+                    Set your goal, pick a hall and meal, then generate three AI-built plates with full macros.
                   </p>
                 </div>
               </CardContent>
@@ -368,6 +445,7 @@ export default function HomePage() {
 
         {/* Context sidebar */}
         <aside className="space-y-4 lg:col-span-1">
+          <MacroTargetCard targets={targets} note={targetNote} />
           <LiveMenuCard
             hasSelection={hasSelection}
             hallName={hall?.name}
@@ -377,7 +455,6 @@ export default function HomePage() {
             error={menuError}
             onRetry={reloadMenu}
           />
-          <HowItWorksCard />
           <DiningHallsCard />
           <SavedCallout />
           <TrustBadge />

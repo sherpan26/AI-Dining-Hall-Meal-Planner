@@ -4,11 +4,13 @@ import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { Settings as SettingsIcon } from "lucide-react"
 import { usePrefs } from "@/lib/store"
+import { estimateTargets, hasProfileForCalc } from "@/lib/nutrition/targets"
 import PreferencesFields, {
   formToPrefs,
   prefsToForm,
   type PrefsFormState,
 } from "@/components/settings/PreferencesFields"
+import { MacroTargetCard } from "@/components/home/sidebar"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 
@@ -21,8 +23,17 @@ export default function SettingsPage() {
     setForm(prefsToForm(prefs))
   }, [prefs])
 
+  const currentPrefs = formToPrefs(form)
+  const targets = estimateTargets(currentPrefs.goal, currentPrefs.profile, currentPrefs.calorieTarget)
+  const targetNote =
+    targets.source === "manual"
+      ? "Based on your calorie target"
+      : hasProfileForCalc(currentPrefs.profile)
+        ? "From your profile & goal"
+        : "From your goal"
+
   const save = () => {
-    setPrefs(formToPrefs(form))
+    setPrefs(currentPrefs)
     toast.success("Preferences saved")
   }
 
@@ -61,6 +72,10 @@ export default function SettingsPage() {
           </Button>
         </CardFooter>
       </Card>
+
+      <div className="max-w-sm">
+        <MacroTargetCard targets={targets} note={targetNote} />
+      </div>
     </div>
   )
 }

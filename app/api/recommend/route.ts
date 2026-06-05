@@ -30,10 +30,18 @@ const menuItemSchema = z.object({
 })
 
 const userPrefsSchema = z.object({
-  goal: z.enum(["lose", "maintain", "gain", "protein"]).default("maintain"),
+  goal: z.enum(["lose", "maintain", "gain", "muscle", "protein"]).default("maintain"),
   diets: z.array(z.string()).default([]),
   avoid: z.array(z.string()).default([]),
   calorieTarget: z.number().optional(),
+})
+
+const macroTargetsSchema = z.object({
+  calories: z.number(),
+  protein: z.number(),
+  carbs: z.number(),
+  fat: z.number(),
+  source: z.enum(["manual", "calculated"]),
 })
 
 const requestSchema = z.object({
@@ -42,6 +50,7 @@ const requestSchema = z.object({
   meal: z.string().min(1),
   menuItems: z.array(menuItemSchema).default([]),
   userPrefs: userPrefsSchema.optional(),
+  macroTargets: macroTargetsSchema.optional(),
   filters: z.array(z.string()).optional(),
 })
 
@@ -64,7 +73,7 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return jsonError("Invalid request", 400, parsed.error.flatten())
   }
-  const { hall: hallKey, meal, menuItems, userPrefs, filters } = parsed.data
+  const { hall: hallKey, meal, menuItems, userPrefs, macroTargets, filters } = parsed.data
 
   // 2. Resolve the dining hall (accept id or display name).
   const hall = getDiningHallById(hallKey) ?? getDiningHallByName(hallKey)
@@ -94,6 +103,7 @@ export async function POST(req: Request) {
     meal,
     menuItems: menuItems as MenuItem[],
     prefs,
+    macroTargets,
     filters,
   })
 

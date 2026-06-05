@@ -13,10 +13,48 @@ import {
   Bookmark,
   ShieldCheck,
   Utensils,
+  Flame,
+  Gauge,
 } from "lucide-react"
 import { DINING_HALLS } from "@/lib/dining-halls"
+import type { MacroTargets } from "@/lib/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+
+/** Estimated daily calorie/macro targets derived from the user's goal/profile. */
+export function MacroTargetCard({ targets, note }: { targets: MacroTargets; note: string }) {
+  const stats: { label: string; value: string }[] = [
+    { label: "Protein", value: `${targets.protein}g` },
+    { label: "Carbs", value: `${targets.carbs}g` },
+    { label: "Fat", value: `${targets.fat}g` },
+  ]
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm">
+          <Gauge className="h-4 w-4 text-primary" />
+          Estimated daily targets
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex items-baseline gap-2">
+          <Flame className="h-5 w-5 text-primary" />
+          <span className="text-2xl font-bold tabular-nums">{targets.calories}</span>
+          <span className="text-sm text-muted-foreground">kcal / day</span>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {stats.map((s) => (
+            <div key={s.label} className="rounded-md bg-muted py-2 text-center">
+              <div className="text-sm font-semibold tabular-nums">{s.value}</div>
+              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{s.label}</div>
+            </div>
+          ))}
+        </div>
+        <p className="text-[11px] text-muted-foreground">{note} · estimate, not medical advice.</p>
+      </CardContent>
+    </Card>
+  )
+}
 
 export interface LiveMenuCardProps {
   hasSelection: boolean

@@ -123,10 +123,33 @@ export interface SavedPlate extends RecommendedPlate {
 // ---------------------------------------------------------------------------
 
 /** Fitness/eating goal that biases recommendations. */
-export type Goal = "lose" | "maintain" | "gain" | "protein"
+export type Goal = "maintain" | "lose" | "gain" | "muscle" | "protein"
 
 /** Dietary filters the user can opt into. */
 export type Diet = "vegetarian" | "vegan" | "halal" | "gluten-free"
+
+/** Self-reported activity level, used to estimate energy needs. */
+export type ActivityLevel = "sedentary" | "light" | "moderate" | "active" | "very-active"
+
+/** Optional, lightweight profile used to refine calorie/macro estimates. */
+export interface UserProfile {
+  age?: number
+  heightCm?: number
+  weightKg?: number
+  activity?: ActivityLevel
+}
+
+/** Where a calorie/macro target came from. */
+export type TargetSource = "manual" | "calculated"
+
+/** Estimated daily nutrition targets (an estimate, not medical advice). */
+export interface MacroTargets {
+  calories: number
+  protein: number
+  carbs: number
+  fat: number
+  source: TargetSource
+}
 
 /** Persisted user preferences (stored locally; no account required). */
 export interface UserPrefs {
@@ -134,8 +157,10 @@ export interface UserPrefs {
   diets: Diet[]
   /** Free-text foods to avoid, e.g. ["mushrooms", "shellfish"]. */
   avoid: string[]
-  /** Optional daily calorie target. */
+  /** Optional manual daily calorie target — overrides any calculated target. */
   calorieTarget?: number
+  /** Optional lightweight profile for better estimates. */
+  profile?: UserProfile
 }
 
 /** Default preferences for a first-time user. */
