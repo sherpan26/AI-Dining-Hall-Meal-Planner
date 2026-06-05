@@ -1,9 +1,9 @@
 "use client"
 
-import { useState } from "react"
-import { Sparkles, ArrowRight, Loader2 } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
+import { Sparkles, ArrowRight, Loader2, CheckCircle2, AlertCircle, RotateCw } from "lucide-react"
 import { DINING_HALLS, getDiningHallById, formatMealPeriod } from "@/lib/dining-halls"
-import type { Diet, Goal } from "@/lib/types"
+import type { Diet, Goal, MenuItem } from "@/lib/types"
 import type { RecommendedPlate } from "@/lib/ai/plate-schema"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -31,27 +31,22 @@ const DIET_OPTIONS: { value: Diet; label: string }[] = [
   { value: "gluten-free", label: "Gluten-free" },
 ]
 
-// Step 4 uses a sample menu so the recommendation flow can be tested before live
-// scraping is wired in. Replace with real menu data in a later step.
-const MOCK_MENU_ITEMS = [
-  { name: "Grilled Chicken Breast", category: "Grill", portion: "1 each" },
-  { name: "Black Bean Burger", category: "Grill", portion: "1 each" },
-  { name: "Brown Rice", category: "Sides", portion: "1 cup" },
-  { name: "Roasted Sweet Potatoes", category: "Sides", portion: "1 cup" },
-  { name: "Steamed Broccoli", category: "Sides", portion: "1 cup" },
-  { name: "Garden Salad", category: "Salad Bar", portion: "1 bowl" },
-  { name: "Scrambled Tofu", category: "Vegan", portion: "1 cup" },
-  { name: "Whole Wheat Pasta", category: "Pasta", portion: "1 cup" },
-  { name: "Marinara Sauce", category: "Pasta", portion: "1/2 cup" },
-  { name: "Grilled Salmon", category: "Grill", portion: "1 fillet" },
-  { name: "Greek Yogurt", category: "Breakfast", portion: "1 cup" },
-  { name: "Mixed Berries", category: "Fruit", portion: "1 cup" },
-]
+/** Format today's date the way /api/menu expects: M/D/YYYY. */
+function todayMenuDate(): string {
+  const d = new Date()
+  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`
+}
 
 export default function HomePage() {
   // Selection
   const [hallId, setHallId] = useState<string>("")
   const [meal, setMeal] = useState<string>("")
+
+  // Live menu
+  const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [isMenuLoading, setIsMenuLoading] = useState(false)
+  const [menuError, setMenuError] = useState<string | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
 
   // Preferences
   const [goal, setGoal] = useState<Goal>("maintain")
@@ -65,7 +60,8 @@ export default function HomePage() {
   const [error, setError] = useState<string | null>(null)
 
   const hall = getDiningHallById(hallId)
-  const canSubmit = Boolean(hallId && meal) && !isLoading
+  const menuReady = menuItems.length > 0
+  const canSubmit = Boolean(hallId && meal && menuReady) && !isLoading && !isMenuLoading
 
   const handleHallChange = (value: string) => {
     setHallId(value)
@@ -76,8 +72,56 @@ export default function HomePage() {
     setDiets((prev) => (prev.includes(value) ? prev.filter((d) => d !== value) : [...prev, value]))
   }
 
+  // Load the live menu whenever a hall + meal are both selected (or on retry).
+  useEffect(() => {
+    const selectedHall = getDiningHallById(hallId)
+    if (!selectedHall || !meal) {
+      setMenuItems([])
+      setMenuError(null)
+      return
+    }
+
+    let ignore = false
+    const controller = new AbortController()
+
+    setIsMenuLoading(true)
+    setMenuError(null)
+    setMenuItems([])
+    setPlates(null)
+    setError(null)
+
+    fetch("/api/menu", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ diningHall: selectedHall.name, date: todayMenuDate(), mealPeriod: meal }),
+      signal: controller.signal,
+    })
+      .then(async (res) => {
+        const data = (await res.json()) as { menuItems?: MenuItem[]; error?: string }
+        if (!res.ok) throw new Error(data.error || "Failed to load the menu.")
+        return data
+      })
+      .then((data) => {
+        if (!ignore) setMenuItems(data.menuItems ?? [])
+      })
+      .catch((err: unknown) => {
+        if (ignore || (err instanceof DOMException && err.name === "AbortError")) return
+        setMenuError(err instanceof Error ? err.message : "Failed to load the menu.")
+      })
+      .finally(() => {
+        if (!ignore) setIsMenuLoading(false)
+      })
+
+    return () => {
+      ignore = true
+      controller.abort()
+    }
+  }, [hallId, meal, reloadKey])
+
+  const reloadMenu = useCallback(() => setReloadKey((k) => k + 1), [])
+
   const getRecommendations = async () => {
-    if (!hallId || !meal) return
+    if (!hallId || !meal || !menuReady) return
     setIsLoading(true)
     setError(null)
     setPlates(null)
@@ -89,7 +133,7 @@ export default function HomePage() {
         body: JSON.stringify({
           hall: hallId,
           meal,
-          menuItems: MOCK_MENU_ITEMS,
+          menuItems,
           userPrefs: {
             goal,
             diets,
@@ -103,10 +147,7 @@ export default function HomePage() {
       })
 
       const data = (await res.json()) as { plates?: RecommendedPlate[]; error?: string }
-
-      if (!res.ok) {
-        throw new Error(data.error || "Something went wrong generating recommendations.")
-      }
+      if (!res.ok) throw new Error(data.error || "Something went wrong generating recommendations.")
       setPlates(data.plates ?? [])
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unexpected error. Please try again.")
@@ -114,6 +155,8 @@ export default function HomePage() {
       setIsLoading(false)
     }
   }
+
+  const showMenuStatus = Boolean(hallId && meal)
 
   return (
     <div className="space-y-10">
@@ -125,8 +168,8 @@ export default function HomePage() {
         </Badge>
         <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">What should you eat at Rutgers today?</h1>
         <p className="mx-auto max-w-xl text-muted-foreground">
-          Pick a dining hall and meal, set your goals, and get AI-recommended plates with macros — built from the
-          menu.
+          Pick a dining hall and meal, set your goals, and get AI-recommended plates with macros — built from
+          today&apos;s live menu.
         </p>
       </section>
 
@@ -170,6 +213,41 @@ export default function HomePage() {
               </Select>
             </div>
           </div>
+
+          {/* Live menu status */}
+          {showMenuStatus && (
+            <div className="text-sm">
+              {isMenuLoading && (
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Loading today&apos;s menu…
+                </span>
+              )}
+              {!isMenuLoading && menuError && (
+                <span className="flex flex-wrap items-center gap-1.5 text-destructive">
+                  <AlertCircle className="h-3.5 w-3.5" />
+                  Couldn&apos;t load the menu: {menuError}
+                  <button onClick={reloadMenu} className="inline-flex items-center gap-1 underline">
+                    <RotateCw className="h-3 w-3" /> Retry
+                  </button>
+                </span>
+              )}
+              {!isMenuLoading && !menuError && menuReady && (
+                <span className="flex items-center gap-1.5 text-muted-foreground">
+                  <CheckCircle2 className="h-3.5 w-3.5 text-green-600" />
+                  Loaded {menuItems.length} live menu items from {hall?.name} · {formatMealPeriod(meal)}
+                </span>
+              )}
+              {!isMenuLoading && !menuError && !menuReady && (
+                <span className="flex flex-wrap items-center gap-1.5 text-muted-foreground">
+                  No items found — this meal may not be served right now.
+                  <button onClick={reloadMenu} className="inline-flex items-center gap-1 underline">
+                    <RotateCw className="h-3 w-3" /> Retry
+                  </button>
+                </span>
+              )}
+            </div>
+          )}
 
           {/* Goal */}
           <div className="space-y-1.5">
@@ -237,24 +315,19 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Button className="w-full gap-2" disabled={!canSubmit} onClick={getRecommendations}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Generating…
-                </>
-              ) : (
-                <>
-                  Get Recommendations
-                  <ArrowRight className="h-4 w-4" />
-                </>
-              )}
-            </Button>
-            <p className="text-center text-xs text-muted-foreground">
-              Using a sample menu for now — live Rutgers menus arrive in a later step.
-            </p>
-          </div>
+          <Button className="w-full gap-2" disabled={!canSubmit} onClick={getRecommendations}>
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin" />
+                Generating…
+              </>
+            ) : (
+              <>
+                Get Recommendations
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
+          </Button>
         </CardContent>
       </Card>
 
@@ -283,8 +356,8 @@ export default function HomePage() {
             <CardContent className="flex flex-col items-center justify-center gap-2 py-12 text-center">
               <p className="font-medium">Your recommendations will appear here</p>
               <p className="max-w-sm text-sm text-muted-foreground">
-                Choose a hall and meal, set your goal, and hit Get Recommendations to see three AI-built plates with
-                macros.
+                Choose a hall and meal to load today&apos;s menu, set your goal, then hit Get Recommendations to see
+                three AI-built plates with macros.
               </p>
             </CardContent>
           </Card>
