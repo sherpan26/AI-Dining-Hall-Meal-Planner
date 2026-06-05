@@ -1,37 +1,26 @@
 "use client"
 
 import { useCallback, useEffect, useState } from "react"
-import { Sparkles, ArrowRight, Loader2, CheckCircle2, AlertCircle, RotateCw } from "lucide-react"
 import { toast } from "sonner"
+import { Sparkles, ArrowRight, Loader2, CheckCircle2, AlertCircle, RotateCw } from "lucide-react"
 import { DINING_HALLS, getDiningHallById, formatMealPeriod } from "@/lib/dining-halls"
-import type { Diet, Goal, MenuItem } from "@/lib/types"
+import type { MenuItem } from "@/lib/types"
 import type { RecommendedPlate } from "@/lib/ai/plate-schema"
-import { useSavedPlates } from "@/lib/store"
+import { usePrefs, useSavedPlates } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { cn } from "@/lib/utils"
+import PreferencesFields, {
+  formToPrefs,
+  prefsToForm,
+  type PrefsFormState,
+} from "@/components/settings/PreferencesFields"
 import TodaysPick from "@/components/recommend/TodaysPick"
 import RecommendationGrid from "@/components/recommend/RecommendationGrid"
 import RecommendationLoading from "@/components/recommend/RecommendationLoading"
 import RecommendationError from "@/components/recommend/RecommendationError"
-
-const GOAL_OPTIONS: { value: Goal; label: string }[] = [
-  { value: "lose", label: "Lose weight" },
-  { value: "maintain", label: "Maintain" },
-  { value: "gain", label: "Gain weight" },
-  { value: "protein", label: "Max protein" },
-]
-
-const DIET_OPTIONS: { value: Diet; label: string }[] = [
-  { value: "vegetarian", label: "Vegetarian" },
-  { value: "vegan", label: "Vegan" },
-  { value: "halal", label: "Halal" },
-  { value: "gluten-free", label: "Gluten-free" },
-]
 
 /** Format today's date the way /api/menu expects: M/D/YYYY. */
 function todayMenuDate(): string {
@@ -50,23 +39,38 @@ export default function HomePage() {
   const [menuError, setMenuError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
 
-  // Preferences
-  const [goal, setGoal] = useState<Goal>("maintain")
-  const [diets, setDiets] = useState<Diet[]>([])
-  const [avoid, setAvoid] = useState<string>("")
-  const [calorieTarget, setCalorieTarget] = useState<string>("")
+  // Preferences — seeded from saved prefs, editable here before generating.
+  const { prefs, setPrefs } = usePrefs()
+  const [prefsForm, setPrefsForm] = useState<PrefsFormState>(() => prefsToForm(prefs))
+
+  // Re-seed the form when stored prefs change (hydration, saved in Settings, other tab).
+  useEffect(() => {
+    setPrefsForm(prefsToForm(prefs))
+  }, [prefs])
+
+  // Saved plates (localStorage)
+  const { savePlate, removePlate, isSaved } = useSavedPlates()
 
   // Results
   const [plates, setPlates] = useState<RecommendedPlate[] | null>(null)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Saved plates (localStorage)
-  const { savePlate, removePlate, isSaved } = useSavedPlates()
-
   const hall = getDiningHallById(hallId)
   const menuReady = menuItems.length > 0
   const canSubmit = Boolean(hallId && meal && menuReady) && !isLoading && !isMenuLoading
+
+  const prefsDirty = JSON.stringify(formToPrefs(prefsForm)) !== JSON.stringify(prefs)
+
+  const handleHallChange = (value: string) => {
+    setHallId(value)
+    setMeal("")
+  }
+
+  const saveAsDefault = () => {
+    setPrefs(formToPrefs(prefsForm))
+    toast.success("Saved as your default preferences")
+  }
 
   const toggleSave = (plate: RecommendedPlate) => {
     if (isSaved(plate.id)) {
@@ -76,15 +80,6 @@ export default function HomePage() {
       savePlate(plate)
       toast.success("Saved to your plates")
     }
-  }
-
-  const handleHallChange = (value: string) => {
-    setHallId(value)
-    setMeal("")
-  }
-
-  const toggleDiet = (value: Diet) => {
-    setDiets((prev) => (prev.includes(value) ? prev.filter((d) => d !== value) : [...prev, value]))
   }
 
   // Load the live menu whenever a hall + meal are both selected (or on retry).
@@ -149,15 +144,7 @@ export default function HomePage() {
           hall: hallId,
           meal,
           menuItems,
-          userPrefs: {
-            goal,
-            diets,
-            avoid: avoid
-              .split(",")
-              .map((s) => s.trim())
-              .filter(Boolean),
-            calorieTarget: calorieTarget ? Number(calorieTarget) : undefined,
-          },
+          userPrefs: formToPrefs(prefsForm),
         }),
       })
 
@@ -264,71 +251,17 @@ export default function HomePage() {
             </div>
           )}
 
-          {/* Goal */}
-          <div className="space-y-1.5">
-            <Label>Goal</Label>
-            <Select value={goal} onValueChange={(v) => setGoal(v as Goal)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {GOAL_OPTIONS.map((g) => (
-                  <SelectItem key={g.value} value={g.value}>
-                    {g.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          {/* Preferences (seeded from saved defaults) */}
+          <PreferencesFields value={prefsForm} onChange={setPrefsForm} />
 
-          {/* Diet chips */}
-          <div className="space-y-1.5">
-            <Label>Dietary restrictions</Label>
-            <div className="flex flex-wrap gap-2">
-              {DIET_OPTIONS.map((d) => {
-                const active = diets.includes(d.value)
-                return (
-                  <button
-                    key={d.value}
-                    type="button"
-                    onClick={() => toggleDiet(d.value)}
-                    aria-pressed={active}
-                    className={cn(
-                      "rounded-full border px-3 py-1 text-sm transition-colors",
-                      active
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-input bg-background hover:bg-muted",
-                    )}
-                  >
-                    {d.label}
-                  </button>
-                )
-              })}
+          {prefsDirty && (
+            <div className="flex items-center justify-between gap-2 text-sm">
+              <span className="text-muted-foreground">You changed your preferences for this session.</span>
+              <Button variant="ghost" size="sm" onClick={saveAsDefault}>
+                Save as default
+              </Button>
             </div>
-          </div>
-
-          {/* Avoid + calorie target */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="avoid">Foods to avoid</Label>
-              <Input
-                id="avoid"
-                placeholder="e.g. mushrooms, shellfish"
-                value={avoid}
-                onChange={(e) => setAvoid(e.target.value)}
-              />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="calorieTarget">Calorie target (optional)</Label>
-              <Input
-                id="calorieTarget"
-                type="number"
-                placeholder="e.g. 700"
-                value={calorieTarget}
-                onChange={(e) => setCalorieTarget(e.target.value)}
-              />
-            </div>
-          </div>
+          )}
 
           <Button className="w-full gap-2" disabled={!canSubmit} onClick={getRecommendations}>
             {isLoading ? (
