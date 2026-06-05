@@ -1,5 +1,6 @@
 import Link from "next/link"
 import TopNav from "@/components/layout/TopNav"
+import { Toaster } from "@/components/ui/sonner"
 
 /**
  * App shell for the AI Dining Concierge: sticky top nav + centered content area.
@@ -19,6 +20,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         </div>
       </footer>
+      <Toaster />
     </div>
   )
 }

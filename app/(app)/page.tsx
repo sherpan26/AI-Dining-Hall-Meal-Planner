@@ -2,9 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { Sparkles, ArrowRight, Loader2, CheckCircle2, AlertCircle, RotateCw } from "lucide-react"
+import { toast } from "sonner"
 import { DINING_HALLS, getDiningHallById, formatMealPeriod } from "@/lib/dining-halls"
 import type { Diet, Goal, MenuItem } from "@/lib/types"
 import type { RecommendedPlate } from "@/lib/ai/plate-schema"
+import { useSavedPlates } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -59,9 +61,22 @@ export default function HomePage() {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  // Saved plates (localStorage)
+  const { savePlate, removePlate, isSaved } = useSavedPlates()
+
   const hall = getDiningHallById(hallId)
   const menuReady = menuItems.length > 0
   const canSubmit = Boolean(hallId && meal && menuReady) && !isLoading && !isMenuLoading
+
+  const toggleSave = (plate: RecommendedPlate) => {
+    if (isSaved(plate.id)) {
+      removePlate(plate.id)
+      toast("Removed from saved")
+    } else {
+      savePlate(plate)
+      toast.success("Saved to your plates")
+    }
+  }
 
   const handleHallChange = (value: string) => {
     setHallId(value)
@@ -338,8 +353,8 @@ export default function HomePage() {
 
       {!isLoading && !error && plates && plates.length > 0 && (
         <div className="space-y-8">
-          <TodaysPick plate={plates[0]} />
-          <RecommendationGrid plates={plates.slice(1)} />
+          <TodaysPick plate={plates[0]} saved={isSaved(plates[0].id)} onToggleSave={toggleSave} />
+          <RecommendationGrid plates={plates.slice(1)} isSaved={isSaved} onToggleSave={toggleSave} />
         </div>
       )}
 

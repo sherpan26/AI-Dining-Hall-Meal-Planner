@@ -8,6 +8,7 @@
  */
 
 import type { DiningHallId, MealPeriodToken } from "@/lib/dining-halls"
+import type { RecommendedPlate } from "@/lib/ai/plate-schema"
 
 // Re-export hall types so consumers can import all domain types from one place.
 export type { DiningHall, DiningHallId, MealPeriodToken } from "@/lib/dining-halls"
@@ -108,8 +109,11 @@ export interface Plate {
   rationale: string
 }
 
-/** A plate the user saved to local storage. */
-export interface SavedPlate extends Plate {
+/**
+ * A plate the user saved to local storage. Based on the AI's `RecommendedPlate`
+ * shape (the thing actually saved), with a timestamp.
+ */
+export interface SavedPlate extends RecommendedPlate {
   /** Epoch millis when saved. */
   savedAt: number
 }

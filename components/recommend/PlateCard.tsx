@@ -1,7 +1,8 @@
-import { AlertTriangle } from "lucide-react"
+import { AlertTriangle, Bookmark, BookmarkCheck } from "lucide-react"
 import type { RecommendedPlate, PlateNutrition } from "@/lib/ai/plate-schema"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 
 /** Compact macro line, e.g. "620 cal · 55g protein · 40g carbs · 18g fat". */
@@ -15,17 +16,37 @@ interface PlateCardProps {
   plate: RecommendedPlate
   /** Render with emphasis (used for Today's Pick). */
   highlight?: boolean
+  /** Whether this plate is currently saved. */
+  saved?: boolean
+  /** If provided, a save/unsave button is shown. */
+  onToggleSave?: (plate: RecommendedPlate) => void
 }
 
-export default function PlateCard({ plate, highlight = false }: PlateCardProps) {
+export default function PlateCard({ plate, highlight = false, saved = false, onToggleSave }: PlateCardProps) {
   return (
     <Card className={cn(highlight && "border-primary/50 ring-1 ring-primary/20")}>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-2">
           <CardTitle className="text-base">{plate.title}</CardTitle>
-          <span className="shrink-0 text-sm font-semibold text-primary">
-            {Math.round(plate.totals.calories)} cal
-          </span>
+          <div className="flex shrink-0 items-center gap-2">
+            <span className="text-sm font-semibold text-primary">{Math.round(plate.totals.calories)} cal</span>
+            {onToggleSave && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                aria-label={saved ? "Remove from saved" : "Save plate"}
+                aria-pressed={saved}
+                onClick={() => onToggleSave(plate)}
+              >
+                {saved ? (
+                  <BookmarkCheck className="h-4 w-4 text-primary" />
+                ) : (
+                  <Bookmark className="h-4 w-4 text-muted-foreground" />
+                )}
+              </Button>
+            )}
+          </div>
         </div>
         {plate.tags.length > 0 && (
           <div className="flex flex-wrap gap-1.5 pt-1">
