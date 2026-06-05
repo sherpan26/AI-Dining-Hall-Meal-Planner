@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { UtensilsCrossed, Home, Bookmark, Settings, BarChart3 } from "lucide-react"
+import { Home, Bookmark, Settings, BarChart3 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 
@@ -26,11 +26,18 @@ export default function TopNav() {
   const isActive = (href: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href))
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b bg-background/80 backdrop-blur">
+    <header className="sticky top-0 z-40 w-full border-b border-border/70 bg-background/80 backdrop-blur">
+      {/* Scarlet brand line */}
+      <div className="h-1 w-full bg-primary" />
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between px-4">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
-          <UtensilsCrossed className="h-5 w-5 text-primary" />
-          <span>RU Dining AI</span>
+        <Link href="/" className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-md bg-primary text-sm font-extrabold tracking-tight text-primary-foreground shadow-sm">
+            RU
+          </span>
+          <span className="flex flex-col leading-none">
+            <span className="text-sm font-semibold">Dining AI</span>
+            <span className="text-[10px] text-muted-foreground">Rutgers–New Brunswick</span>
+          </span>
         </Link>
 
         <nav className="flex items-center gap-1">
@@ -53,7 +60,7 @@ export default function TopNav() {
                 href={href}
                 className={cn(
                   "flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm transition-colors hover:bg-muted",
-                  isActive(href) ? "bg-muted font-medium text-foreground" : "text-muted-foreground",
+                  isActive(href) ? "bg-primary/10 font-medium text-primary" : "text-muted-foreground",
                 )}
               >
                 <Icon className="h-4 w-4" />

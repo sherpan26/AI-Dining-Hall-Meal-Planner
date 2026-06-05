@@ -2,9 +2,9 @@ import type { Metadata } from 'next'
 import './globals.css'
 
 export const metadata: Metadata = {
-  title: 'Rutgers Dining Hall AI Meal Planner',
+  title: 'RU Dining AI — Rutgers–New Brunswick Meal Planner',
   description:
-    'AI-powered meal planning and nutrition assistant for Rutgers University students. Browse live dining hall menus, analyze meals, and build plans aligned with your nutrition goals.',
+    'AI-recommended plates with full macros, built from today’s live dining hall menus across Rutgers–New Brunswick — Busch, Livingston, Neilson, and The Atrium.',
   keywords: [
     'Rutgers',
     'dining hall',

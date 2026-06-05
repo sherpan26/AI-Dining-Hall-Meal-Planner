@@ -9,7 +9,6 @@ import type { RecommendedPlate } from "@/lib/ai/plate-schema"
 import { usePrefs, useSavedPlates } from "@/lib/store"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
@@ -176,16 +175,28 @@ export default function HomePage() {
   return (
     <div className="space-y-10">
       {/* Hero */}
-      <section className="space-y-3 text-center">
-        <Badge variant="secondary" className="gap-1">
-          <Sparkles className="h-3.5 w-3.5" />
-          AI Dining Concierge
-        </Badge>
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">What should you eat at Rutgers today?</h1>
-        <p className="mx-auto max-w-xl text-muted-foreground">
-          Pick a dining hall and meal, set your goals, and get AI-recommended plates with macros — built from
-          today&apos;s live menu.
-        </p>
+      <section className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-primary via-[#9b0026] to-zinc-900 px-6 py-12 text-center text-white shadow-sm sm:py-16">
+        {/* Decorative shapes */}
+        <div aria-hidden className="pointer-events-none absolute -left-16 -top-20 h-52 w-52 rounded-full bg-white/10 blur-3xl" />
+        <div aria-hidden className="pointer-events-none absolute -bottom-24 -right-12 h-60 w-60 rounded-full bg-black/30 blur-3xl" />
+        <div className="relative mx-auto max-w-2xl space-y-4">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/15 px-3 py-1 text-xs font-medium backdrop-blur">
+            <Sparkles className="h-3.5 w-3.5" />
+            Rutgers–New Brunswick · AI Dining Concierge
+          </span>
+          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">What should you eat on campus today?</h1>
+          <p className="mx-auto max-w-xl text-pretty text-white/80">
+            AI-recommended plates with full macros, built from today&apos;s live dining hall menus across Rutgers–New
+            Brunswick.
+          </p>
+          <div className="flex flex-wrap justify-center gap-2 pt-1 text-xs text-white/90">
+            {["Busch", "Livingston", "Neilson", "The Atrium"].map((hall) => (
+              <span key={hall} className="rounded-full bg-white/10 px-2.5 py-1 backdrop-blur">
+                {hall}
+              </span>
+            ))}
+          </div>
+        </div>
       </section>
 
       {/* Selector + preferences */}
@@ -319,6 +330,7 @@ export default function HomePage() {
       {!isLoading && !error && plates && plates.length > 0 && (
         <section className="space-y-6">
           <div className="space-y-1">
+            <p className="text-xs font-semibold uppercase tracking-wide text-primary">Your picks</p>
             <h2 className="text-xl font-bold tracking-tight">Your recommendations</h2>
             <p className="text-sm text-muted-foreground">
               {hall?.name} · {formatMealPeriod(meal)} · tailored to your goal

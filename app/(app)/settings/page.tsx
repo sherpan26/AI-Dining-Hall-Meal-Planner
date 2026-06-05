@@ -34,6 +34,7 @@ export default function SettingsPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-primary">Rutgers–New Brunswick</p>
         <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
         <p className="text-muted-foreground">
           Your goal and dietary preferences guide every recommendation. Stored on this device — no account needed.

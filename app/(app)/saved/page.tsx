@@ -16,6 +16,7 @@ export default function SavedPage() {
   return (
     <div className="space-y-6">
       <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-primary">Rutgers–New Brunswick</p>
         <h1 className="text-2xl font-bold tracking-tight">Saved Plates</h1>
         <p className="text-muted-foreground">
           {count > 0

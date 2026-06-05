@@ -12,10 +12,13 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-screen flex-col">
       <TopNav />
       <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8">{children}</main>
-      <footer className="border-t py-4">
-        <div className="mx-auto flex max-w-5xl items-center justify-between px-4 text-xs text-muted-foreground">
-          <span>RU Dining AI — AI meal planning for Rutgers dining halls</span>
-          <Link href="/legacy" className="hover:underline">
+      <footer className="border-t py-5">
+        <div className="mx-auto flex max-w-5xl flex-col gap-1 px-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <div className="space-y-0.5">
+            <p className="font-medium text-foreground">RU Dining AI · Rutgers–New Brunswick</p>
+            <p>AI meal planning for Busch, Livingston, Neilson &amp; The Atrium.</p>
+          </div>
+          <Link href="/legacy" className="self-start hover:text-foreground hover:underline sm:self-auto">
             Legacy app
           </Link>
         </div>
