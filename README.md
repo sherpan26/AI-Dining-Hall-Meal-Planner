@@ -82,9 +82,10 @@ prescription.
 
 - **Strict build checks are still suppressed** in `next.config.mjs`
   (`typescript.ignoreBuildErrors` and `eslint.ignoreDuringBuilds` are `true`).
-- The legacy tabbed app (`/legacy`) and its components have been **removed**, which
-  cleared the known legacy TypeScript errors. Re-enabling the build checks is the
-  next planned step and was intentionally left out of the legacy-removal commit.
-- A few legacy server/API files are now **orphaned** and slated for a follow-up
-  cleanup commit: `app/actions/generate-meal-plan.ts`, `app/api/chat`,
-  `app/api/chat/direct`, `app/api/analyze-meal`, and `lib/events.ts`.
+- The legacy tabbed app (`/legacy`), its components, and the orphaned legacy AI
+  endpoints/action (`app/api/chat`, `app/api/chat/direct`, `app/api/analyze-meal`,
+  `app/actions/generate-meal-plan.ts`, `lib/events.ts`) have all been **removed**.
+  `npx tsc --noEmit` now passes with **zero** errors.
+- **Next planned step:** re-enable the TypeScript/ESLint build checks in
+  `next.config.mjs` (set both `ignore*` flags to `false`) now that the codebase
+  type-checks cleanly.
