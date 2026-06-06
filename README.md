@@ -68,3 +68,24 @@ pnpm dev
 ```
 
 Open http://localhost:3000
+
+## Disclaimer
+
+Unofficial student-built tool — **not affiliated with Rutgers University or Rutgers
+Dining Services**. Calorie and macro figures are **estimates for general planning
+only and are not medical or dietary advice**. The calorie/macro estimator
+(`lib/nutrition/targets.ts`) uses a deliberately simplified, sex-neutral
+Mifflin–St Jeor–style calculation; treat its output as a rough guide, not a
+prescription.
+
+## Known cleanup / TODO
+
+- **Strict build checks are intentionally suppressed** in `next.config.mjs`
+  (`typescript.ignoreBuildErrors` and `eslint.ignoreDuringBuilds` are `true`).
+- The remaining TypeScript errors are confined to the **legacy** components and
+  routes (the original tabbed app, still reachable at `/legacy`). The new AI
+  Dining Concierge code (`app/(app)`, `lib/`, `components/{home,recommend,settings,layout}`)
+  type-checks cleanly.
+- **Do not re-enable** `ignoreBuildErrors` / `ignoreDuringBuilds` until `/legacy`
+  and the old components/unused API routes are removed (or fixed). Re-enabling
+  before then will fail the build on pre-existing legacy errors.

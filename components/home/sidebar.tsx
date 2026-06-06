@@ -50,7 +50,12 @@ export function MacroTargetCard({ targets, note }: { targets: MacroTargets; note
             </div>
           ))}
         </div>
-        <p className="text-[11px] text-muted-foreground">{note} · estimate, not medical advice.</p>
+        <div className="space-y-0.5">
+          <p className="text-[11px] text-muted-foreground">{note}.</p>
+          <p className="text-[11px] text-muted-foreground">
+            Estimates are for general planning only and are not medical or dietary advice.
+          </p>
+        </div>
       </CardContent>
     </Card>
   )

@@ -1,9 +1,23 @@
 /**
  * Lightweight calorie/macro target estimation.
  *
- * This is a rough ESTIMATE for guidance only — not medical or dietary advice.
- * It uses the Mifflin–St Jeor equation when enough profile data is available,
- * and falls back to simple goal-based defaults otherwise.
+ * IMPORTANT: this is a rough ESTIMATE for general planning only — NOT medical or
+ * dietary advice. The numbers it produces should not be treated as clinically
+ * precise or as required intake.
+ *
+ * Methodology (intentionally simplified for MVP use):
+ * - When age, height, and weight are provided, it uses a *simplified,
+ *   sex-neutral* variant of the Mifflin–St Jeor equation. We use the midpoint of
+ *   the male (+5) and female (−161) constants (−78) so we don't have to collect a
+ *   sex/gender input. This trades some accuracy for a lighter, more private form.
+ * - It multiplies BMR by a coarse activity factor to approximate TDEE, then
+ *   applies a flat per-goal calorie delta.
+ * - When profile data is missing, it falls back to simple goal-based defaults.
+ * - Macro splits are simple per-goal heuristics, not individualized prescriptions.
+ *
+ * This is deliberately kept lightweight; a more rigorous model is out of scope
+ * for the MVP. Do not add sex/gender or other sensitive inputs without a clear
+ * reason, and keep any such input optional.
  */
 
 import type { ActivityLevel, Goal, MacroTargets, UserProfile } from "@/lib/types"

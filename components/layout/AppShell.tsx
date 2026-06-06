@@ -13,12 +13,16 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
       <TopNav />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">{children}</main>
       <footer className="border-t bg-background/60 py-5">
-        <div className="mx-auto flex max-w-6xl flex-col gap-1 px-4 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
-          <div className="space-y-0.5">
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-4 text-xs text-muted-foreground sm:flex-row sm:items-start sm:justify-between">
+          <div className="space-y-1">
             <p className="font-medium text-foreground">RU Dining AI · Rutgers–New Brunswick</p>
             <p>AI meal planning for Busch, Livingston, Neilson &amp; The Atrium.</p>
+            <p className="max-w-md text-muted-foreground/80">
+              Unofficial student-built tool — not affiliated with Rutgers University or Rutgers Dining Services.
+              Nutrition values are estimates for general planning only, not medical or dietary advice.
+            </p>
           </div>
-          <Link href="/legacy" className="self-start hover:text-foreground hover:underline sm:self-auto">
+          <Link href="/legacy" className="self-start hover:text-foreground hover:underline">
             Legacy app
           </Link>
         </div>
