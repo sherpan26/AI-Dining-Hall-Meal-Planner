@@ -78,14 +78,15 @@ only and are not medical or dietary advice**. The calorie/macro estimator
 Mifflin–St Jeor–style calculation; treat its output as a rough guide, not a
 prescription.
 
-## Known cleanup / TODO
+## Quality gates
 
-- **Strict build checks are still suppressed** in `next.config.mjs`
-  (`typescript.ignoreBuildErrors` and `eslint.ignoreDuringBuilds` are `true`).
+- **TypeScript is enforced at build time.** `next.config.mjs` no longer suppresses
+  type errors, so `next build` fails on any type error. `npx tsc --noEmit` passes
+  with **zero** errors.
+- **ESLint is not wired up yet.** There is no ESLint config and neither `eslint`
+  nor `eslint-config-next` is installed, so `next build` runs no lint step. Adding
+  them is an optional future step (it requires a dependency change, deliberately
+  deferred).
 - The legacy tabbed app (`/legacy`), its components, and the orphaned legacy AI
   endpoints/action (`app/api/chat`, `app/api/chat/direct`, `app/api/analyze-meal`,
   `app/actions/generate-meal-plan.ts`, `lib/events.ts`) have all been **removed**.
-  `npx tsc --noEmit` now passes with **zero** errors.
-- **Next planned step:** re-enable the TypeScript/ESLint build checks in
-  `next.config.mjs` (set both `ignore*` flags to `false`) now that the codebase
-  type-checks cleanly.
