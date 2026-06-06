@@ -1,11 +1,9 @@
-import Link from "next/link"
 import TopNav from "@/components/layout/TopNav"
 import { Toaster } from "@/components/ui/sonner"
 
 /**
  * App shell for the AI Dining Concierge: sticky top nav + centered content area.
- * Wraps the new (app) route group. The legacy tabbed app at /legacy is intentionally
- * NOT wrapped by this shell.
+ * Wraps the new (app) route group.
  */
 export default function AppShell({ children }: { children: React.ReactNode }) {
   return (
@@ -22,9 +20,6 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
               Nutrition values are estimates for general planning only, not medical or dietary advice.
             </p>
           </div>
-          <Link href="/legacy" className="self-start hover:text-foreground hover:underline">
-            Legacy app
-          </Link>
         </div>
       </footer>
       <Toaster />

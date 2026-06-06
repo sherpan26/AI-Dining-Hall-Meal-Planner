@@ -80,12 +80,11 @@ prescription.
 
 ## Known cleanup / TODO
 
-- **Strict build checks are intentionally suppressed** in `next.config.mjs`
+- **Strict build checks are still suppressed** in `next.config.mjs`
   (`typescript.ignoreBuildErrors` and `eslint.ignoreDuringBuilds` are `true`).
-- The remaining TypeScript errors are confined to the **legacy** components and
-  routes (the original tabbed app, still reachable at `/legacy`). The new AI
-  Dining Concierge code (`app/(app)`, `lib/`, `components/{home,recommend,settings,layout}`)
-  type-checks cleanly.
-- **Do not re-enable** `ignoreBuildErrors` / `ignoreDuringBuilds` until `/legacy`
-  and the old components/unused API routes are removed (or fixed). Re-enabling
-  before then will fail the build on pre-existing legacy errors.
+- The legacy tabbed app (`/legacy`) and its components have been **removed**, which
+  cleared the known legacy TypeScript errors. Re-enabling the build checks is the
+  next planned step and was intentionally left out of the legacy-removal commit.
+- A few legacy server/API files are now **orphaned** and slated for a follow-up
+  cleanup commit: `app/actions/generate-meal-plan.ts`, `app/api/chat`,
+  `app/api/chat/direct`, `app/api/analyze-meal`, and `lib/events.ts`.
