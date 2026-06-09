@@ -12,7 +12,13 @@
 import { createGoogleGenerativeAI } from "@ai-sdk/google"
 import { getNextApiKey } from "@/lib/api-key-rotation"
 
-export const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash"
+// Model selection (free-tier reality on current keys):
+//  - `gemini-2.0-flash` / `-lite`: 429, free-tier quota is 0 — unusable.
+//  - `gemini-1.5-flash`: 404, no longer served on v1beta.
+//  - `gemini-2.5-flash`: works, but intermittently 503s under demand.
+//  - `gemini-2.5-flash-lite`: works and is consistently available — our default.
+// Override with GOOGLE_GENERATIVE_AI_MODEL if you have access to a better model.
+export const DEFAULT_GEMINI_MODEL = process.env.GOOGLE_GENERATIVE_AI_MODEL || "gemini-2.5-flash-lite"
 
 /** Names of the env vars the app reads for Gemini keys (kept in sync with api-key-rotation). */
 const GEMINI_KEY_ENV_VARS = [

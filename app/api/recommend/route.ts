@@ -13,7 +13,7 @@ import { NextResponse } from "next/server"
 import { generateObject } from "ai"
 import { z } from "zod"
 import { getDiningHallById, getDiningHallByName } from "@/lib/dining-halls"
-import { getGeminiModel, hasGeminiKey } from "@/lib/ai/gemini"
+import { DEFAULT_GEMINI_MODEL, getGeminiModel, hasGeminiKey } from "@/lib/ai/gemini"
 import { aiRecommendationSchema, type RecommendedPlate } from "@/lib/ai/plate-schema"
 import { buildRecommendationPrompt } from "@/lib/ai/prompts"
 import type { MenuItem, UserPrefs } from "@/lib/types"
@@ -134,7 +134,22 @@ export async function POST(req: Request) {
 
     return NextResponse.json({ plates })
   } catch (error) {
-    console.error("Error in /api/recommend:", error)
-    return jsonError("Failed to generate recommendations", 502)
+    // Log only safe fields. NOTE: never log the whole error or its `url`, which
+    // for Google API calls can contain the API key as a query param.
+    const err = error as { name?: string; message?: string; statusCode?: number; status?: number }
+    const debug = {
+      keyPresent: hasGeminiKey(),
+      model: DEFAULT_GEMINI_MODEL,
+      menuItems: menuItems.length,
+      hasMacroTargets: Boolean(macroTargets),
+      errorName: err?.name,
+      errorMessage: err?.message,
+      status: err?.statusCode ?? err?.status,
+    }
+    console.error("[recommend] generateObject failed:", debug)
+
+    // Surface details in development only; keep production errors generic.
+    const isDev = process.env.NODE_ENV !== "production"
+    return jsonError("Failed to generate recommendations", 502, isDev ? debug : undefined)
   }
 }
