@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation"
 import { Home, Bookmark, Settings, BarChart3 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
+import ThemeToggle from "@/components/layout/ThemeToggle"
 
 interface NavItem {
   href: string
@@ -40,7 +41,8 @@ export default function TopNav() {
           </span>
         </Link>
 
-        <nav className="flex items-center gap-1">
+        <div className="flex items-center gap-1">
+          <nav className="flex items-center gap-1">
           {NAV_ITEMS.map(({ href, label, icon: Icon, disabled }) =>
             disabled ? (
               <span
@@ -68,7 +70,10 @@ export default function TopNav() {
               </Link>
             ),
           )}
-        </nav>
+          </nav>
+          <div className="mx-1 h-5 w-px bg-border" />
+          <ThemeToggle />
+        </div>
       </div>
     </header>
   )

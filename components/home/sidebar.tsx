@@ -17,9 +17,14 @@ import {
   Gauge,
 } from "lucide-react"
 import { DINING_HALLS } from "@/lib/dining-halls"
-import type { MacroTargets } from "@/lib/types"
+import type { MacroTargets, MenuSource } from "@/lib/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+
+const SOURCE_LABELS: Record<MenuSource, string> = {
+  nutrislice: "Nutrislice",
+  foodpro: "FoodPro",
+}
 
 /** Estimated daily calorie/macro targets derived from the user's goal/profile. */
 export function MacroTargetCard({ targets, note }: { targets: MacroTargets; note: string }) {
@@ -68,11 +73,21 @@ export interface LiveMenuCardProps {
   count: number
   isLoading: boolean
   error: string | null
+  source?: MenuSource | null
   onRetry: () => void
 }
 
 /** Live menu status widget — reflects the current hall/meal selection. */
-export function LiveMenuCard({ hasSelection, hallName, mealLabel, count, isLoading, error, onRetry }: LiveMenuCardProps) {
+export function LiveMenuCard({
+  hasSelection,
+  hallName,
+  mealLabel,
+  count,
+  isLoading,
+  error,
+  source,
+  onRetry,
+}: LiveMenuCardProps) {
   return (
     <Card>
       <CardHeader className="pb-2">
@@ -110,6 +125,7 @@ export function LiveMenuCard({ hasSelection, hallName, mealLabel, count, isLoadi
             </p>
             <p className="text-xs text-muted-foreground">
               {hallName} · {mealLabel}
+              {source && <span className="ml-1 text-muted-foreground/70">· via {SOURCE_LABELS[source]}</span>}
             </p>
           </div>
         )}

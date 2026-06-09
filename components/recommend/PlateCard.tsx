@@ -3,18 +3,18 @@ import type { RecommendedPlate, PlateNutrition } from "@/lib/ai/plate-schema"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { cn, formatFoodName } from "@/lib/utils"
 
 /** Compact per-item macros, e.g. "220 cal · 25P / 0C / 6F". */
 function itemMacros(n: PlateNutrition): string {
   return `${Math.round(n.calories)} cal · ${Math.round(n.protein)}P / ${Math.round(n.carbs)}C / ${Math.round(n.fat)}F`
 }
 
-const MACRO_STATS: { key: keyof PlateNutrition; label: string; suffix: string }[] = [
+const MACRO_STATS: { key: keyof PlateNutrition; label: string; suffix: string; dot?: string }[] = [
   { key: "calories", label: "Calories", suffix: "" },
-  { key: "protein", label: "Protein", suffix: "g" },
-  { key: "carbs", label: "Carbs", suffix: "g" },
-  { key: "fat", label: "Fat", suffix: "g" },
+  { key: "protein", label: "Protein", suffix: "g", dot: "bg-primary" },
+  { key: "carbs", label: "Carbs", suffix: "g", dot: "bg-amber-400" },
+  { key: "fat", label: "Fat", suffix: "g", dot: "bg-sky-400" },
 ]
 
 interface PlateCardProps {
@@ -66,7 +66,7 @@ export default function PlateCard({ plate, highlight = false, saved = false, onT
         <ul className="divide-y rounded-md border">
           {plate.items.map((item, i) => (
             <li key={`${item.name}-${i}`} className="flex items-center justify-between gap-3 px-3 py-2 text-sm">
-              <span className="min-w-0 truncate font-medium">{item.name}</span>
+              <span className="min-w-0 truncate font-medium">{formatFoodName(item.name)}</span>
               <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
                 {itemMacros(item.nutrition)}
               </span>
@@ -75,8 +75,25 @@ export default function PlateCard({ plate, highlight = false, saved = false, onT
         </ul>
 
         {/* Plate totals */}
-        <div className="space-y-1.5">
+        <div className="space-y-2">
           <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Plate total</p>
+
+          {/* Macro proportion bar (by calorie contribution) */}
+          {(() => {
+            const pCal = plate.totals.protein * 4
+            const cCal = plate.totals.carbs * 4
+            const fCal = plate.totals.fat * 9
+            const macroTotal = pCal + cCal + fCal || 1
+            const pct = (v: number) => `${(v / macroTotal) * 100}%`
+            return (
+              <div className="flex h-2 overflow-hidden rounded-full bg-muted" aria-hidden>
+                <div className="bg-primary" style={{ width: pct(pCal) }} />
+                <div className="bg-amber-400" style={{ width: pct(cCal) }} />
+                <div className="bg-sky-400" style={{ width: pct(fCal) }} />
+              </div>
+            )
+          })()}
+
           <div className="grid grid-cols-4 gap-2">
             {MACRO_STATS.map((m) => (
               <div key={m.key} className="rounded-md bg-muted py-2 text-center">
@@ -84,7 +101,10 @@ export default function PlateCard({ plate, highlight = false, saved = false, onT
                   {Math.round(plate.totals[m.key])}
                   {m.suffix}
                 </div>
-                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{m.label}</div>
+                <div className="flex items-center justify-center gap-1 text-[10px] uppercase tracking-wide text-muted-foreground">
+                  {m.dot && <span className={cn("h-1.5 w-1.5 rounded-full", m.dot)} />}
+                  {m.label}
+                </div>
               </div>
             ))}
           </div>

@@ -17,7 +17,7 @@ import {
   WheatOff,
 } from "lucide-react"
 import { DINING_HALLS, getDiningHallById, formatMealPeriod } from "@/lib/dining-halls"
-import type { MenuItem } from "@/lib/types"
+import type { MenuItem, MenuSource } from "@/lib/types"
 import type { RecommendedPlate } from "@/lib/ai/plate-schema"
 import { usePrefs, useSavedPlates } from "@/lib/store"
 import { estimateTargets, hasProfileForCalc } from "@/lib/nutrition/targets"
@@ -95,6 +95,7 @@ export default function HomePage() {
 
   // Live menu
   const [menuItems, setMenuItems] = useState<MenuItem[]>([])
+  const [menuSource, setMenuSource] = useState<MenuSource | null>(null)
   const [isMenuLoading, setIsMenuLoading] = useState(false)
   const [menuError, setMenuError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
@@ -163,6 +164,7 @@ export default function HomePage() {
     const selectedHall = getDiningHallById(hallId)
     if (!selectedHall || !meal) {
       setMenuItems([])
+      setMenuSource(null)
       setMenuError(null)
       return
     }
@@ -173,6 +175,7 @@ export default function HomePage() {
     setIsMenuLoading(true)
     setMenuError(null)
     setMenuItems([])
+    setMenuSource(null)
     setPlates(null)
     setError(null)
 
@@ -183,12 +186,14 @@ export default function HomePage() {
       signal: controller.signal,
     })
       .then(async (res) => {
-        const data = (await res.json()) as { menuItems?: MenuItem[]; error?: string }
+        const data = (await res.json()) as { menuItems?: MenuItem[]; source?: MenuSource | null; error?: string }
         if (!res.ok) throw new Error(data.error || "Failed to load the menu.")
         return data
       })
       .then((data) => {
-        if (!ignore) setMenuItems(data.menuItems ?? [])
+        if (ignore) return
+        setMenuItems(data.menuItems ?? [])
+        setMenuSource(data.source ?? null)
       })
       .catch((err: unknown) => {
         if (ignore || (err instanceof DOMException && err.name === "AbortError")) return
@@ -420,6 +425,10 @@ export default function HomePage() {
                 <p className="text-sm text-muted-foreground">
                   {hall?.name} · {formatMealPeriod(meal)} · tailored to your goal
                 </p>
+                <p className="text-xs text-muted-foreground">
+                  Aiming for ~{Math.round(targets.calories / 3)} kcal this meal (about a third of your ~
+                  {targets.calories} kcal/day estimate).
+                </p>
               </div>
               <TodaysPick plate={plates[0]} saved={isSaved(plates[0].id)} onToggleSave={toggleSave} />
               <RecommendationGrid plates={plates.slice(1)} isSaved={isSaved} onToggleSave={toggleSave} />
@@ -453,6 +462,7 @@ export default function HomePage() {
             count={menuItems.length}
             isLoading={isMenuLoading}
             error={menuError}
+            source={menuSource}
             onRetry={reloadMenu}
           />
           <DiningHallsCard />
