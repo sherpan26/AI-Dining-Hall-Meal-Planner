@@ -30,9 +30,23 @@ export interface MenuItem {
   portion: string
   /** Link to the FoodPro nutrition-label page, when available. */
   nutritionLink: string | null
-  /** Optionally hydrated after fetching the nutrition label. */
-  nutrition?: NutritionInfo
+
+  // --- Optional enriched data (currently provided by Nutrislice) ---
+  /** Per-item macros, when the provider supplies them. */
+  calories?: number
+  protein?: number
+  carbs?: number
+  fat?: number
+  /** Allergens the item contains, e.g. ["Milk", "Wheat"]. */
+  allergens?: string[]
+  /** Dietary tags, e.g. ["Vegetarian", "Vegan"]. */
+  dietaryTags?: string[]
+  /** Which provider supplied this item. */
+  source?: MenuSource
 }
+
+/** Which provider supplied the menu data. */
+export type MenuSource = "nutrislice" | "foodpro"
 
 /** Menu for one hall + meal period + date, grouped for convenient rendering. */
 export interface MenuData {
@@ -42,6 +56,8 @@ export interface MenuData {
   menuItems: MenuItem[]
   menuByCategory: Record<string, MenuItem[]>
   timestamp: string
+  /** Provider that produced the items, or null if none returned data. */
+  source?: MenuSource | null
   error?: string
 }
 

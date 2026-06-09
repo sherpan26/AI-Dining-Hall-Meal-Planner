@@ -115,21 +115,23 @@ export async function scrapeDiningMenu(input: ScrapeMenuInput): Promise<MenuData
   const html = await response.text()
   const menuItems = extractMenuItems(html)
 
-  // Group menu items by category
-  const menuByCategory = menuItems.reduce<Record<string, MenuItem[]>>((acc, item) => {
+  return {
+    diningHall,
+    date,
+    mealPeriod,
+    menuItems,
+    menuByCategory: groupMenuByCategory(menuItems),
+    timestamp: new Date().toISOString(),
+  }
+}
+
+/** Group a flat list of menu items by their `category` (preserving insertion order). */
+export function groupMenuByCategory(items: MenuItem[]): Record<string, MenuItem[]> {
+  return items.reduce<Record<string, MenuItem[]>>((acc, item) => {
     if (!acc[item.category]) {
       acc[item.category] = []
     }
     acc[item.category].push(item)
     return acc
   }, {})
-
-  return {
-    diningHall,
-    date,
-    mealPeriod,
-    menuItems,
-    menuByCategory,
-    timestamp: new Date().toISOString(),
-  }
 }

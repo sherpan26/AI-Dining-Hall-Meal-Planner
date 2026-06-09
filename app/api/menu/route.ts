@@ -1,11 +1,13 @@
 import { NextResponse } from "next/server"
-import { scrapeDiningMenu } from "@/lib/scrape/menu"
+import { getMenu } from "@/lib/menu/get-menu"
 
 export async function POST(req: Request) {
   try {
     const { diningHall, date, mealPeriod } = await req.json()
 
-    const data = await scrapeDiningMenu({ diningHall, date, mealPeriod })
+    // Prefer Nutrislice, fall back to FoodPro; same response shape as before
+    // (now with an optional `source`, and a friendly `error` when both are empty).
+    const data = await getMenu({ diningHall, date, mealPeriod })
 
     return NextResponse.json(data)
   } catch (error) {
