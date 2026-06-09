@@ -27,6 +27,14 @@ const menuItemSchema = z.object({
   category: z.string().optional().default("Uncategorized"),
   portion: z.string().optional().default(""),
   nutritionLink: z.string().nullable().optional().default(null),
+  // Optional enriched fields (Nutrislice). Preserved so the prompt can use them.
+  calories: z.number().optional(),
+  protein: z.number().optional(),
+  carbs: z.number().optional(),
+  fat: z.number().optional(),
+  allergens: z.array(z.string()).optional(),
+  dietaryTags: z.array(z.string()).optional(),
+  source: z.enum(["nutrislice", "foodpro"]).optional(),
 })
 
 const userPrefsSchema = z.object({

@@ -35,6 +35,27 @@ export interface RecommendPromptInput {
 }
 
 /**
+ * Render one menu item with any enriched data the provider supplied:
+ * `Name (portion) [macros] {dietary tags} (contains allergens)`.
+ * Item names are preserved exactly so the model can copy them verbatim.
+ */
+function itemLine(item: MenuItem): string {
+  let line = item.portion ? `${item.name} (${item.portion})` : item.name
+
+  if (item.calories !== undefined) {
+    const macros = [`${Math.round(item.calories)} cal`]
+    if (item.protein !== undefined) macros.push(`${Math.round(item.protein)}g protein`)
+    if (item.carbs !== undefined) macros.push(`${Math.round(item.carbs)}g carbs`)
+    if (item.fat !== undefined) macros.push(`${Math.round(item.fat)}g fat`)
+    line += ` [${macros.join(", ")}]`
+  }
+  if (item.dietaryTags?.length) line += ` {${item.dietaryTags.join(", ")}}`
+  if (item.allergens?.length) line += ` (contains ${item.allergens.join(", ")})`
+
+  return line
+}
+
+/**
  * Summarize a menu into a compact, category-grouped text block, capping the total
  * number of items so the prompt stays small. Item names are preserved exactly so
  * the model can copy them verbatim.
@@ -49,8 +70,7 @@ export function summarizeMenu(menuItems: MenuItem[], limit: number = DEFAULT_MEN
     if (count >= limit) break
     const category = item.category || "Uncategorized"
     const names = byCategory.get(category) ?? []
-    const label = item.portion ? `${item.name} (${item.portion})` : item.name
-    names.push(label)
+    names.push(itemLine(item))
     byCategory.set(category, names)
     count++
   }
@@ -107,8 +127,9 @@ export function buildRecommendationPrompt(input: RecommendPromptInput): string {
     ``,
     `Rules:`,
     `- Each plate must use 1-6 items, taken verbatim from the menu above.`,
-    `- Respect the dietary restrictions and avoid list strictly.`,
-    `- Estimate realistic nutrition (calories/protein/carbs/fat) for each item and provide accurate plate totals.`,
+    `- Menu annotations: [..] = per-item macros, {..} = dietary tags, (contains ..) = allergens.`,
+    `- STRICTLY exclude any item whose allergens or contents conflict with the user's dietary restrictions or avoid list; prefer items whose dietary tags match the user's diets.`,
+    `- When an item lists macros, use those exact values; otherwise estimate. Each plate's totals must sum its items' macros.`,
     `- Bias choices toward the student's goal and the per-meal targets above.`,
     `- Each rationale (1-2 sentences) must explain how the plate supports the student's goal.`,
     `- Add concise tags (e.g. "high-protein", "vegetarian") and any relevant allergen/diet warnings.`,
