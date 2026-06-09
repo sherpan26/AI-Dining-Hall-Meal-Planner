@@ -1,6 +1,6 @@
 # Rutgers Dining AI
 
-**Live demo:** https://rutgers-dining.vercel.app
+**Live demo:** [https://rutgers-dining.vercel.app](https://dininghallplanner.vercel.app/)
 
 An AI-assisted meal planning and nutrition helper for Rutgers University students.
 
