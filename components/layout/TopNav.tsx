@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Bookmark, Settings, BarChart3 } from "lucide-react"
+import { Home, Bookmark, ClipboardList, Settings, BarChart3 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Badge } from "@/components/ui/badge"
 import ThemeToggle from "@/components/layout/ThemeToggle"
@@ -17,6 +17,7 @@ interface NavItem {
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Home", icon: Home },
   { href: "/saved", label: "Saved", icon: Bookmark },
+  { href: "/log", label: "Log", icon: ClipboardList },
   { href: "/settings", label: "Settings", icon: Settings },
   { href: "/compare", label: "Compare", icon: BarChart3, disabled: true },
 ]

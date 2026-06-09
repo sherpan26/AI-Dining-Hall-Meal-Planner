@@ -6,17 +6,18 @@ interface TodaysPickProps {
   plate: RecommendedPlate
   saved?: boolean
   onToggleSave?: (plate: RecommendedPlate) => void
+  onLogMeal?: (plate: RecommendedPlate) => void
 }
 
 /** Highlights the single best plate at the top of the results. */
-export default function TodaysPick({ plate, saved, onToggleSave }: TodaysPickProps) {
+export default function TodaysPick({ plate, saved, onToggleSave, onLogMeal }: TodaysPickProps) {
   return (
     <section className="space-y-3">
       <div className="flex items-center gap-2">
         <Sparkles className="h-4 w-4 text-primary" />
         <h2 className="text-lg font-semibold">Today&apos;s Pick</h2>
       </div>
-      <PlateCard plate={plate} highlight saved={saved} onToggleSave={onToggleSave} />
+      <PlateCard plate={plate} highlight saved={saved} onToggleSave={onToggleSave} onLogMeal={onLogMeal} />
     </section>
   )
 }

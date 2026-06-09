@@ -11,13 +11,32 @@
  */
 
 import { useCallback, useEffect, useState } from "react"
-import { DEFAULT_USER_PREFS, type SavedPlate, type UserPrefs } from "@/lib/types"
+import {
+  DEFAULT_USER_PREFS,
+  type LoggedMeal,
+  type MacroTotals,
+  type SavedPlate,
+  type UserPrefs,
+} from "@/lib/types"
+import type { RecommendedPlate } from "@/lib/ai/plate-schema"
+import { getLocalDateKey } from "@/lib/date"
 
 /** localStorage keys owned by this module. */
 export const STORAGE_KEYS = {
   prefs: "ru-dining:prefs",
   savedPlates: "ru-dining:saved-plates",
+  loggedMeals: "ru-dining:logged-meals",
 } as const
+
+/** Browser-safe unique id. */
+function newId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID()
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2)}`
+}
+
+const EMPTY_TOTALS: MacroTotals = { calories: 0, protein: 0, carbs: 0, fat: 0 }
 
 function isBrowser(): boolean {
   return typeof window !== "undefined" && typeof window.localStorage !== "undefined"
@@ -158,4 +177,102 @@ export function useSavedPlates(): UseSavedPlatesResult {
   const clearSaved = useCallback(() => setSavedPlates([]), [setSavedPlates])
 
   return { savedPlates, savePlate, removePlate, isSaved, clearSaved }
+}
+
+// ---------------------------------------------------------------------------
+// Logged meals (Daily Log)
+// ---------------------------------------------------------------------------
+
+/** Metadata captured at log time (the hall/meal the plate came from). */
+export interface LogMealMeta {
+  hall: string
+  meal: string
+}
+
+export interface UseLoggedMealsResult {
+  loggedMeals: LoggedMeal[]
+  /** Log a recommended plate as eaten today. Allows duplicates intentionally. */
+  logMeal: (plate: RecommendedPlate, meta: LogMealMeta) => LoggedMeal
+  removeLoggedMeal: (id: string) => void
+  clearLoggedMealsForDate: (date: string) => void
+  getMealsForDate: (date: string) => LoggedMeal[]
+  getTodayMeals: () => LoggedMeal[]
+  getTotalsForDate: (date: string) => MacroTotals
+}
+
+/** Read/write the user's logged (eaten) meals from localStorage. */
+export function useLoggedMeals(): UseLoggedMealsResult {
+  const [loggedMeals, setLoggedMeals] = useLocalStorageState<LoggedMeal[]>(STORAGE_KEYS.loggedMeals, [])
+
+  const logMeal = useCallback(
+    (plate: RecommendedPlate, meta: LogMealMeta) => {
+      const entry: LoggedMeal = {
+        id: newId(),
+        plateId: plate.id,
+        title: plate.title,
+        hall: meta.hall,
+        meal: meta.meal,
+        date: getLocalDateKey(),
+        loggedAt: new Date().toISOString(),
+        items: plate.items,
+        totals: {
+          calories: plate.totals.calories,
+          protein: plate.totals.protein,
+          carbs: plate.totals.carbs,
+          fat: plate.totals.fat,
+        },
+        tags: plate.tags,
+        warnings: plate.warnings,
+      }
+      setLoggedMeals((prev) => [entry, ...prev])
+      return entry
+    },
+    [setLoggedMeals],
+  )
+
+  const removeLoggedMeal = useCallback(
+    (id: string) => setLoggedMeals((prev) => prev.filter((m) => m.id !== id)),
+    [setLoggedMeals],
+  )
+
+  const clearLoggedMealsForDate = useCallback(
+    (date: string) => setLoggedMeals((prev) => prev.filter((m) => m.date !== date)),
+    [setLoggedMeals],
+  )
+
+  const getMealsForDate = useCallback(
+    (date: string) => loggedMeals.filter((m) => m.date === date),
+    [loggedMeals],
+  )
+
+  const getTodayMeals = useCallback(
+    () => loggedMeals.filter((m) => m.date === getLocalDateKey()),
+    [loggedMeals],
+  )
+
+  const getTotalsForDate = useCallback(
+    (date: string) =>
+      loggedMeals
+        .filter((m) => m.date === date)
+        .reduce<MacroTotals>(
+          (acc, m) => ({
+            calories: acc.calories + m.totals.calories,
+            protein: acc.protein + m.totals.protein,
+            carbs: acc.carbs + m.totals.carbs,
+            fat: acc.fat + m.totals.fat,
+          }),
+          { ...EMPTY_TOTALS },
+        ),
+    [loggedMeals],
+  )
+
+  return {
+    loggedMeals,
+    logMeal,
+    removeLoggedMeal,
+    clearLoggedMealsForDate,
+    getMealsForDate,
+    getTodayMeals,
+    getTotalsForDate,
+  }
 }

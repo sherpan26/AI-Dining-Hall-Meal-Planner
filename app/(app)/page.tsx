@@ -19,8 +19,9 @@ import {
 import { DINING_HALLS, getDiningHallById, formatMealPeriod } from "@/lib/dining-halls"
 import type { MenuItem, MenuSource } from "@/lib/types"
 import type { RecommendedPlate } from "@/lib/ai/plate-schema"
-import { usePrefs, useSavedPlates } from "@/lib/store"
-import { estimateTargets, hasProfileForCalc } from "@/lib/nutrition/targets"
+import { usePrefs, useSavedPlates, useLoggedMeals } from "@/lib/store"
+import { estimateTargets, targetSourceNote } from "@/lib/nutrition/targets"
+import { getLocalDateKey } from "@/lib/date"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
@@ -46,6 +47,7 @@ import {
   SavedCallout,
   TrustBadge,
 } from "@/components/home/sidebar"
+import TodaysFuelCard from "@/components/home/TodaysFuelCard"
 
 /** Format today's date the way /api/menu expects: M/D/YYYY. */
 function todayMenuDate(): string {
@@ -114,6 +116,11 @@ export default function HomePage() {
   // Saved plates (localStorage)
   const { savePlate, removePlate, isSaved } = useSavedPlates()
 
+  // Logged meals (localStorage) — owned here so logging updates Today's Fuel instantly.
+  const { logMeal, getTodayMeals, getTotalsForDate } = useLoggedMeals()
+  const todayMeals = getTodayMeals()
+  const todayTotals = getTotalsForDate(getLocalDateKey())
+
   // Results
   const [plates, setPlates] = useState<RecommendedPlate[] | null>(null)
   const [isLoading, setIsLoading] = useState(false)
@@ -127,12 +134,7 @@ export default function HomePage() {
   // Derived preferences + estimated targets (recomputed as the form changes).
   const currentPrefs = formToPrefs(prefsForm)
   const targets = estimateTargets(currentPrefs.goal, currentPrefs.profile, currentPrefs.calorieTarget)
-  const targetNote =
-    targets.source === "manual"
-      ? "Based on your calorie target"
-      : hasProfileForCalc(currentPrefs.profile)
-        ? "From your profile & goal"
-        : "From your goal"
+  const targetNote = targetSourceNote(targets, currentPrefs.profile)
   const prefsDirty = JSON.stringify(currentPrefs) !== JSON.stringify(prefs)
 
   const handleHallChange = (value: string) => {
@@ -157,6 +159,12 @@ export default function HomePage() {
       savePlate(plate)
       toast.success("Saved to your plates")
     }
+  }
+
+  const handleLogMeal = (plate: RecommendedPlate) => {
+    if (!hall || !meal) return
+    logMeal(plate, { hall: hall.name, meal: formatMealPeriod(meal) })
+    toast.success(`Logged "${plate.title}" for today.`)
   }
 
   // Load the live menu whenever a hall + meal are both selected (or on retry).
@@ -430,8 +438,18 @@ export default function HomePage() {
                   {targets.calories} kcal/day estimate).
                 </p>
               </div>
-              <TodaysPick plate={plates[0]} saved={isSaved(plates[0].id)} onToggleSave={toggleSave} />
-              <RecommendationGrid plates={plates.slice(1)} isSaved={isSaved} onToggleSave={toggleSave} />
+              <TodaysPick
+                plate={plates[0]}
+                saved={isSaved(plates[0].id)}
+                onToggleSave={toggleSave}
+                onLogMeal={handleLogMeal}
+              />
+              <RecommendationGrid
+                plates={plates.slice(1)}
+                isSaved={isSaved}
+                onToggleSave={toggleSave}
+                onLogMeal={handleLogMeal}
+              />
             </section>
           )}
 
@@ -455,6 +473,7 @@ export default function HomePage() {
         {/* Context sidebar */}
         <aside className="space-y-4 lg:col-span-1">
           <MacroTargetCard targets={targets} note={targetNote} />
+          <TodaysFuelCard totals={todayTotals} meals={todayMeals} targets={targets} note={targetNote} />
           <LiveMenuCard
             hasSelection={hasSelection}
             hallName={hall?.name}

@@ -113,3 +113,9 @@ export function estimateTargets(goal: Goal, profile?: UserProfile, manualCalorie
     source,
   }
 }
+
+/** Short, friendly description of where the current targets came from. */
+export function targetSourceNote(targets: MacroTargets, profile?: UserProfile): string {
+  if (targets.source === "manual") return "Based on your calorie target"
+  return hasProfileForCalc(profile) ? "From your profile & goal" : "From your goal"
+}

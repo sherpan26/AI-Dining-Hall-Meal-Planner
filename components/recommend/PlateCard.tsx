@@ -1,4 +1,4 @@
-import { AlertTriangle, Bookmark, BookmarkCheck } from "lucide-react"
+import { AlertTriangle, Bookmark, BookmarkCheck, Plus } from "lucide-react"
 import type { RecommendedPlate, PlateNutrition } from "@/lib/ai/plate-schema"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -25,9 +25,17 @@ interface PlateCardProps {
   saved?: boolean
   /** If provided, a save/unsave button is shown. */
   onToggleSave?: (plate: RecommendedPlate) => void
+  /** If provided, a "Log meal" button is shown (logs the plate as eaten). */
+  onLogMeal?: (plate: RecommendedPlate) => void
 }
 
-export default function PlateCard({ plate, highlight = false, saved = false, onToggleSave }: PlateCardProps) {
+export default function PlateCard({
+  plate,
+  highlight = false,
+  saved = false,
+  onToggleSave,
+  onLogMeal,
+}: PlateCardProps) {
   return (
     <Card className={cn("flex flex-col", highlight && "border-primary/60 shadow-sm ring-1 ring-primary/20")}>
       <CardHeader className="gap-2 pb-3">
@@ -112,12 +120,21 @@ export default function PlateCard({ plate, highlight = false, saved = false, onT
 
         {plate.rationale && <p className="text-sm text-muted-foreground">{plate.rationale}</p>}
 
-        {plate.warnings.length > 0 && (
-          <div className="mt-auto flex items-start gap-1.5 rounded-md bg-amber-50 px-2.5 py-1.5 text-xs text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
-            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-            <span>{plate.warnings.join(" · ")}</span>
-          </div>
-        )}
+        {/* Footer: warnings + log action, pinned to the bottom for aligned cards. */}
+        <div className="mt-auto space-y-3">
+          {plate.warnings.length > 0 && (
+            <div className="flex items-start gap-1.5 rounded-md bg-amber-50 px-2.5 py-1.5 text-xs text-amber-700 dark:bg-amber-950/40 dark:text-amber-400">
+              <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+              <span>{plate.warnings.join(" · ")}</span>
+            </div>
+          )}
+          {onLogMeal && (
+            <Button variant="secondary" size="sm" className="w-full gap-1.5" onClick={() => onLogMeal(plate)}>
+              <Plus className="h-4 w-4" />
+              Log meal
+            </Button>
+          )}
+        </div>
       </CardContent>
     </Card>
   )

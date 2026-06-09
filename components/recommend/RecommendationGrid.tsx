@@ -6,10 +6,11 @@ interface RecommendationGridProps {
   /** Returns whether a given plate id is currently saved. */
   isSaved?: (id: string) => boolean
   onToggleSave?: (plate: RecommendedPlate) => void
+  onLogMeal?: (plate: RecommendedPlate) => void
 }
 
 /** Renders the remaining (non-pick) plate recommendations in a grid. */
-export default function RecommendationGrid({ plates, isSaved, onToggleSave }: RecommendationGridProps) {
+export default function RecommendationGrid({ plates, isSaved, onToggleSave, onLogMeal }: RecommendationGridProps) {
   if (plates.length === 0) return null
 
   return (
@@ -22,6 +23,7 @@ export default function RecommendationGrid({ plates, isSaved, onToggleSave }: Re
             plate={plate}
             saved={isSaved?.(plate.id)}
             onToggleSave={onToggleSave}
+            onLogMeal={onLogMeal}
           />
         ))}
       </div>

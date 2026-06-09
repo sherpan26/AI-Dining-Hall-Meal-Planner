@@ -135,6 +135,39 @@ export interface SavedPlate extends RecommendedPlate {
 }
 
 // ---------------------------------------------------------------------------
+// Logged meals (Daily Log — what the user actually ate)
+// ---------------------------------------------------------------------------
+
+/** Plain calorie/macro totals (no source metadata). */
+export interface MacroTotals {
+  calories: number
+  protein: number
+  carbs: number
+  fat: number
+}
+
+/**
+ * A meal the user actually ate, counted toward their daily nutrition.
+ * Distinct from `SavedPlate` (a bookmark for later).
+ */
+export interface LoggedMeal {
+  id: string
+  /** The recommended plate this came from, if any. */
+  plateId?: string
+  title: string
+  hall: string
+  meal: string
+  /** Local date "YYYY-MM-DD" the meal counts toward. */
+  date: string
+  /** ISO timestamp when it was logged. */
+  loggedAt: string
+  items: PlateItem[]
+  totals: MacroTotals
+  tags?: string[]
+  warnings?: string[]
+}
+
+// ---------------------------------------------------------------------------
 // User preferences
 // ---------------------------------------------------------------------------
 
