@@ -198,6 +198,10 @@ export interface UseLoggedMealsResult {
   getMealsForDate: (date: string) => LoggedMeal[]
   getTodayMeals: () => LoggedMeal[]
   getTotalsForDate: (date: string) => MacroTotals
+  /** Distinct date keys that have at least one logged meal, most recent first. */
+  getDatesWithMeals: () => string[]
+  /** Number of meals logged on a given date key. */
+  getMealCountForDate: (date: string) => number
 }
 
 /** Read/write the user's logged (eaten) meals from localStorage. */
@@ -266,6 +270,16 @@ export function useLoggedMeals(): UseLoggedMealsResult {
     [loggedMeals],
   )
 
+  const getDatesWithMeals = useCallback(
+    () => Array.from(new Set(loggedMeals.map((m) => m.date))).sort().reverse(),
+    [loggedMeals],
+  )
+
+  const getMealCountForDate = useCallback(
+    (date: string) => loggedMeals.reduce((n, m) => (m.date === date ? n + 1 : n), 0),
+    [loggedMeals],
+  )
+
   return {
     loggedMeals,
     logMeal,
@@ -274,5 +288,7 @@ export function useLoggedMeals(): UseLoggedMealsResult {
     getMealsForDate,
     getTodayMeals,
     getTotalsForDate,
+    getDatesWithMeals,
+    getMealCountForDate,
   }
 }

@@ -1,55 +1,60 @@
 "use client"
 
-import Link from "next/link"
-import { ClipboardList, Trash2 } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
 import { toast } from "sonner"
 import { usePrefs, useLoggedMeals } from "@/lib/store"
 import { estimateTargets, targetSourceNote } from "@/lib/nutrition/targets"
-import { getLocalDateKey, formatDateLabel } from "@/lib/date"
-import { Button } from "@/components/ui/button"
+import { getLocalDateKey, isToday } from "@/lib/date"
 import { Card, CardContent } from "@/components/ui/card"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog"
-import DailySummaryCard from "@/components/log/DailySummaryCard"
-import LoggedMealCard from "@/components/log/LoggedMealCard"
+import MealCalendar, { type DaySummary } from "@/components/log/MealCalendar"
+import SelectedDayPanel from "@/components/log/SelectedDayPanel"
+import RecentDays from "@/components/log/RecentDays"
 
 export default function LogPage() {
+  // Gate on mount so the calendar/today never render with build-time dates
+  // (avoids SSR/CSR hydration mismatches; logged meals also hydrate client-side).
+  const [mounted, setMounted] = useState(false)
+  useEffect(() => setMounted(true), [])
+
   const { prefs } = usePrefs()
   const targets = estimateTargets(prefs.goal, prefs.profile, prefs.calorieTarget)
   const note = targetSourceNote(targets, prefs.profile)
 
-  const { loggedMeals, removeLoggedMeal, clearLoggedMealsForDate, getMealsForDate, getTotalsForDate } =
-    useLoggedMeals()
+  const {
+    removeLoggedMeal,
+    clearLoggedMealsForDate,
+    getMealsForDate,
+    getTotalsForDate,
+    getMealCountForDate,
+    getDatesWithMeals,
+  } = useLoggedMeals()
 
-  const todayKey = getLocalDateKey()
-  const todayMeals = getMealsForDate(todayKey)
-  const todayTotals = getTotalsForDate(todayKey)
+  const [selectedDate, setSelectedDate] = useState<string>(() => getLocalDateKey())
 
-  // Distinct dates with logged meals, excluding today, most recent first.
-  const prevDates = Array.from(new Set(loggedMeals.map((m) => m.date)))
-    .filter((d) => d !== todayKey)
-    .sort()
-    .reverse()
+  const selectedMeals = getMealsForDate(selectedDate)
+  const selectedTotals = getTotalsForDate(selectedDate)
+  const recentDays = getDatesWithMeals().slice(0, 8)
 
-  const hasAny = loggedMeals.length > 0
+  // Per-day summary for calendar cells: meal count + calories as % of target.
+  const getDaySummary = useCallback(
+    (dateKey: string): DaySummary | null => {
+      const mealCount = getMealCountForDate(dateKey)
+      if (mealCount === 0) return null
+      const calories = getTotalsForDate(dateKey).calories
+      const caloriePct = targets.calories > 0 ? (calories / targets.calories) * 100 : 0
+      return { mealCount, caloriePct }
+    },
+    [getMealCountForDate, getTotalsForDate, targets.calories],
+  )
 
   const handleRemove = (id: string) => {
     removeLoggedMeal(id)
     toast("Removed from your log")
   }
 
-  const handleClearToday = () => {
-    clearLoggedMealsForDate(todayKey)
-    toast("Cleared today's log")
+  const handleClearDay = () => {
+    clearLoggedMealsForDate(selectedDate)
+    toast(isToday(selectedDate) ? "Cleared today's log" : "Cleared this day's log")
   }
 
   return (
@@ -61,100 +66,34 @@ export default function LogPage() {
         <p className="text-muted-foreground">Track what you actually ate from Rutgers dining halls.</p>
       </div>
 
-      {!hasAny ? (
-        <Card className="border-dashed">
-          <CardContent className="flex flex-col items-center justify-center gap-3 py-16 text-center">
-            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-muted">
-              <ClipboardList className="h-6 w-6 text-muted-foreground" />
-            </div>
-            <div className="space-y-1">
-              <p className="font-medium">You haven&apos;t logged any meals yet</p>
-              <p className="mx-auto max-w-sm text-sm text-muted-foreground">
-                Generate a recommendation and tap &ldquo;Log meal&rdquo; to start tracking your daily nutrition.
-              </p>
-            </div>
-            <Button asChild className="mt-1">
-              <Link href="/">Get recommendations</Link>
-            </Button>
-          </CardContent>
+      {!mounted ? (
+        <Card>
+          <CardContent className="py-16 text-center text-sm text-muted-foreground">Loading your log…</CardContent>
         </Card>
       ) : (
-        <>
-          {/* Today summary + meals */}
-          <section className="space-y-4">
-            <DailySummaryCard
-              title="Today"
-              subtitle={`${formatDateLabel(todayKey)} · ${note}`}
-              totals={todayTotals}
-              targets={targets}
-              mealCount={todayMeals.length}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Calendar + quick day jumps */}
+          <div className="space-y-4">
+            <MealCalendar selectedDate={selectedDate} onSelectDate={setSelectedDate} getDaySummary={getDaySummary} />
+            <RecentDays
+              dates={recentDays}
+              selectedDate={selectedDate}
+              onSelect={setSelectedDate}
+              getMealCountForDate={getMealCountForDate}
             />
+          </div>
 
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-lg font-semibold">Today&apos;s meals</h2>
-              {todayMeals.length > 0 && (
-                <AlertDialog>
-                  <AlertDialogTrigger asChild>
-                    <Button variant="ghost" size="sm" className="gap-1 text-muted-foreground hover:text-destructive">
-                      <Trash2 className="h-4 w-4" />
-                      Clear today
-                    </Button>
-                  </AlertDialogTrigger>
-                  <AlertDialogContent>
-                    <AlertDialogHeader>
-                      <AlertDialogTitle>Clear today&apos;s log?</AlertDialogTitle>
-                      <AlertDialogDescription>
-                        This removes all {todayMeals.length} meal{todayMeals.length === 1 ? "" : "s"} logged today. This
-                        can&apos;t be undone.
-                      </AlertDialogDescription>
-                    </AlertDialogHeader>
-                    <AlertDialogFooter>
-                      <AlertDialogCancel>Cancel</AlertDialogCancel>
-                      <AlertDialogAction onClick={handleClearToday}>Clear today</AlertDialogAction>
-                    </AlertDialogFooter>
-                  </AlertDialogContent>
-                </AlertDialog>
-              )}
-            </div>
-
-            {todayMeals.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No meals logged today yet.</p>
-            ) : (
-              <div className="grid gap-3 sm:grid-cols-2">
-                {todayMeals.map((m) => (
-                  <LoggedMealCard key={m.id} meal={m} onRemove={handleRemove} />
-                ))}
-              </div>
-            )}
-          </section>
-
-          {/* Previous days */}
-          {prevDates.length > 0 && (
-            <section className="space-y-6">
-              <h2 className="text-lg font-semibold">Previous days</h2>
-              {prevDates.map((date) => {
-                const meals = getMealsForDate(date)
-                const totals = getTotalsForDate(date)
-                return (
-                  <div key={date} className="space-y-3">
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <h3 className="font-semibold">{formatDateLabel(date)}</h3>
-                      <span className="text-xs tabular-nums text-muted-foreground">
-                        {meals.length} meal{meals.length === 1 ? "" : "s"} · {Math.round(totals.calories)} cal ·{" "}
-                        {Math.round(totals.protein)}g P · {Math.round(totals.carbs)}g C · {Math.round(totals.fat)}g F
-                      </span>
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {meals.map((m) => (
-                        <LoggedMealCard key={m.id} meal={m} onRemove={handleRemove} />
-                      ))}
-                    </div>
-                  </div>
-                )
-              })}
-            </section>
-          )}
-        </>
+          {/* Selected day detail */}
+          <SelectedDayPanel
+            dateKey={selectedDate}
+            meals={selectedMeals}
+            totals={selectedTotals}
+            targets={targets}
+            note={note}
+            onRemoveMeal={handleRemove}
+            onClearDay={handleClearDay}
+          />
+        </div>
       )}
     </div>
   )
