@@ -2,24 +2,22 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Home, Bookmark, ClipboardList, Settings, BarChart3 } from "lucide-react"
+import { Home, Bookmark, ClipboardList, BookOpen, Settings } from "lucide-react"
 import { cn } from "@/lib/utils"
-import { Badge } from "@/components/ui/badge"
 import ThemeToggle from "@/components/layout/ThemeToggle"
 
 interface NavItem {
   href: string
   label: string
   icon: React.ComponentType<{ className?: string }>
-  disabled?: boolean
 }
 
 const NAV_ITEMS: NavItem[] = [
   { href: "/", label: "Home", icon: Home },
   { href: "/saved", label: "Saved", icon: Bookmark },
   { href: "/log", label: "Log", icon: ClipboardList },
+  { href: "/resources", label: "Resources", icon: BookOpen },
   { href: "/settings", label: "Settings", icon: Settings },
-  { href: "/compare", label: "Compare", icon: BarChart3, disabled: true },
 ]
 
 export default function TopNav() {
@@ -44,20 +42,7 @@ export default function TopNav() {
 
         <div className="flex items-center gap-1">
           <nav className="flex items-center gap-1">
-          {NAV_ITEMS.map(({ href, label, icon: Icon, disabled }) =>
-            disabled ? (
-              <span
-                key={href}
-                aria-disabled
-                className="flex cursor-not-allowed items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-muted-foreground/60"
-              >
-                <Icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{label}</span>
-                <Badge variant="secondary" className="ml-1 hidden px-1.5 py-0 text-[10px] sm:inline">
-                  Soon
-                </Badge>
-              </span>
-            ) : (
+            {NAV_ITEMS.map(({ href, label, icon: Icon }) => (
               <Link
                 key={href}
                 href={href}
@@ -69,8 +54,7 @@ export default function TopNav() {
                 <Icon className="h-4 w-4" />
                 <span className="hidden sm:inline">{label}</span>
               </Link>
-            ),
-          )}
+            ))}
           </nav>
           <div className="mx-1 h-5 w-px bg-border" />
           <ThemeToggle />

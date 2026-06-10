@@ -32,10 +32,12 @@ account required.
 - **AI plate recommendations** — structured Gemini output validated with Zod
 - **Goal-based macro targets** — calorie/protein/carb/fat goals from your profile and goal
 - **Dietary preferences and quick filters** — high-protein, lower-calorie, vegetarian, gluten-free, comfort
-- **Saved plates** — bookmark recommendations to revisit later
+- **Remaining-target recommendations** — once you've logged meals today, the AI suggests the best *next* meal for the calories/protein you have left
+- **Saved plate library** — search, filter, sort, and re-log your bookmarked plates anytime
 - **Meal logging** — record what you actually ate
 - **Today's Fuel progress tracker** — live progress bars vs. your daily targets
-- **Daily Log page** — today's totals plus previous days, grouped by date
+- **Calendar-based Daily Log** — a month calendar with per-day detail, plus **Weekly Insights** (7-day habits from your logged meals)
+- **Resources** — trusted guides for nutrition basics, healthy eating, and activity
 - **LocalStorage persistence** — everything stays in your browser, no account
 - **Light/dark mode** — system-aware theme toggle
 - **Rutgers-themed UI** — scarlet-accented, responsive dashboard

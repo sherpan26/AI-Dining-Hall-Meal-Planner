@@ -9,6 +9,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import MealCalendar, { type DaySummary } from "@/components/log/MealCalendar"
 import SelectedDayPanel from "@/components/log/SelectedDayPanel"
 import RecentDays from "@/components/log/RecentDays"
+import WeeklyInsights from "@/components/log/WeeklyInsights"
 
 export default function LogPage() {
   // Gate on mount so the calendar/today never render with build-time dates
@@ -21,6 +22,7 @@ export default function LogPage() {
   const note = targetSourceNote(targets, prefs.profile)
 
   const {
+    loggedMeals,
     removeLoggedMeal,
     clearLoggedMealsForDate,
     getMealsForDate,
@@ -71,28 +73,33 @@ export default function LogPage() {
           <CardContent className="py-16 text-center text-sm text-muted-foreground">Loading your log…</CardContent>
         </Card>
       ) : (
-        <div className="grid gap-6 lg:grid-cols-2">
-          {/* Calendar + quick day jumps */}
-          <div className="space-y-4">
-            <MealCalendar selectedDate={selectedDate} onSelectDate={setSelectedDate} getDaySummary={getDaySummary} />
-            <RecentDays
-              dates={recentDays}
-              selectedDate={selectedDate}
-              onSelect={setSelectedDate}
-              getMealCountForDate={getMealCountForDate}
+        <div className="space-y-6">
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Calendar + quick day jumps */}
+            <div className="space-y-4">
+              <MealCalendar selectedDate={selectedDate} onSelectDate={setSelectedDate} getDaySummary={getDaySummary} />
+              <RecentDays
+                dates={recentDays}
+                selectedDate={selectedDate}
+                onSelect={setSelectedDate}
+                getMealCountForDate={getMealCountForDate}
+              />
+            </div>
+
+            {/* Selected day detail */}
+            <SelectedDayPanel
+              dateKey={selectedDate}
+              meals={selectedMeals}
+              totals={selectedTotals}
+              targets={targets}
+              note={note}
+              onRemoveMeal={handleRemove}
+              onClearDay={handleClearDay}
             />
           </div>
 
-          {/* Selected day detail */}
-          <SelectedDayPanel
-            dateKey={selectedDate}
-            meals={selectedMeals}
-            totals={selectedTotals}
-            targets={targets}
-            note={note}
-            onRemoveMeal={handleRemove}
-            onClearDay={handleClearDay}
-          />
+          {/* 7-day habits */}
+          <WeeklyInsights loggedMeals={loggedMeals} targets={targets} selectedDate={selectedDate} />
         </div>
       )}
     </div>

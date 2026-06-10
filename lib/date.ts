@@ -16,6 +16,18 @@ export function isToday(dateKey: string): boolean {
   return dateKey === getLocalDateKey()
 }
 
+/**
+ * The last `days` local date keys ending today, oldest first.
+ * e.g. getRecentDateKeys(7) → 6 days ago … today.
+ */
+export function getRecentDateKeys(days: number, from: Date = new Date()): string[] {
+  const keys: string[] = []
+  for (let i = days - 1; i >= 0; i--) {
+    keys.push(getLocalDateKey(new Date(from.getFullYear(), from.getMonth(), from.getDate() - i)))
+  }
+  return keys
+}
+
 /** Human label for a date key, e.g. "June 9, 2026". */
 export function formatDateLabel(dateKey: string): string {
   const [y, m, d] = dateKey.split("-").map(Number)
