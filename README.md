@@ -30,14 +30,14 @@ account required.
 - **Live Rutgers dining menu data** — real menus for Busch, Livingston, Neilson, and The Atrium
 - **Nutrislice provider with FoodPro fallback** — structured JSON first, scraper as backup
 - **AI plate recommendations** — structured Gemini output validated with Zod
-- **Goal-based macro targets** — calorie/protein/carb/fat goals from your profile and goal
+- **Goal-based macro targets** — set your goal and profile once in **Settings** (the single source of truth); Home and recommendations use them automatically
 - **Dietary preferences and quick filters** — high-protein, lower-calorie, vegetarian, gluten-free, comfort
 - **Remaining-target recommendations** — once you've logged meals today, the AI suggests the best *next* meal for the calories/protein you have left
 - **Saved plate library** — search, filter, sort, and re-log your bookmarked plates anytime
-- **Meal logging** — record what you actually ate
+- **Meal logging with portion control** — adjust quantities (½×, 2×, skip items), set the meal period, and add a note before logging — then **edit** any logged meal later
 - **Today's Fuel progress tracker** — live progress bars vs. your daily targets
 - **Calendar-based Daily Log** — a month calendar with per-day detail, plus **Weekly Insights** (7-day habits from your logged meals)
-- **Resources** — trusted guides for nutrition basics, healthy eating, and activity
+- **Resources** — a visual hub of trusted, article-style nutrition, healthy-eating, and activity guides
 - **LocalStorage persistence** — everything stays in your browser, no account
 - **Light/dark mode** — system-aware theme toggle
 - **Rutgers-themed UI** — scarlet-accented, responsive dashboard
