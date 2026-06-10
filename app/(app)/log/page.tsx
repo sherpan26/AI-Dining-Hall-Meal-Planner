@@ -5,11 +5,13 @@ import { toast } from "sonner"
 import { usePrefs, useLoggedMeals } from "@/lib/store"
 import { estimateTargets, targetSourceNote } from "@/lib/nutrition/targets"
 import { getLocalDateKey, isToday } from "@/lib/date"
+import type { LoggedMeal } from "@/lib/types"
 import { Card, CardContent } from "@/components/ui/card"
 import MealCalendar, { type DaySummary } from "@/components/log/MealCalendar"
 import SelectedDayPanel from "@/components/log/SelectedDayPanel"
 import RecentDays from "@/components/log/RecentDays"
 import WeeklyInsights from "@/components/log/WeeklyInsights"
+import MealLogDialog, { draftFromLogged, type MealDraft } from "@/components/log/MealLogDialog"
 
 export default function LogPage() {
   // Gate on mount so the calendar/today never render with build-time dates
@@ -24,6 +26,7 @@ export default function LogPage() {
   const {
     loggedMeals,
     removeLoggedMeal,
+    updateLoggedMeal,
     clearLoggedMealsForDate,
     getMealsForDate,
     getTotalsForDate,
@@ -32,6 +35,10 @@ export default function LogPage() {
   } = useLoggedMeals()
 
   const [selectedDate, setSelectedDate] = useState<string>(() => getLocalDateKey())
+
+  // Edit-logged-meal dialog.
+  const [editDraft, setEditDraft] = useState<MealDraft | null>(null)
+  const [editOpen, setEditOpen] = useState(false)
 
   const selectedMeals = getMealsForDate(selectedDate)
   const selectedTotals = getTotalsForDate(selectedDate)
@@ -52,6 +59,17 @@ export default function LogPage() {
   const handleRemove = (id: string) => {
     removeLoggedMeal(id)
     toast("Removed from your log")
+  }
+
+  const handleEdit = (meal: LoggedMeal) => {
+    setEditDraft(draftFromLogged(meal))
+    setEditOpen(true)
+  }
+
+  const handleConfirmEdit = (meal: Omit<LoggedMeal, "id" | "loggedAt">) => {
+    if (!editDraft?.id) return
+    updateLoggedMeal(editDraft.id, meal)
+    toast.success("Updated your logged meal")
   }
 
   const handleClearDay = () => {
@@ -94,6 +112,7 @@ export default function LogPage() {
               targets={targets}
               note={note}
               onRemoveMeal={handleRemove}
+              onEditMeal={handleEdit}
               onClearDay={handleClearDay}
             />
           </div>
@@ -102,6 +121,14 @@ export default function LogPage() {
           <WeeklyInsights loggedMeals={loggedMeals} targets={targets} selectedDate={selectedDate} />
         </div>
       )}
+
+      <MealLogDialog
+        mode="edit"
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        draft={editDraft}
+        onConfirm={handleConfirmEdit}
+      />
     </div>
   )
 }

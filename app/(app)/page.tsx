@@ -17,7 +17,7 @@ import {
   WheatOff,
 } from "lucide-react"
 import { DINING_HALLS, getDiningHallById, formatMealPeriod } from "@/lib/dining-halls"
-import type { MenuItem, MenuSource, RemainingTargets } from "@/lib/types"
+import type { LoggedMeal, MenuItem, MenuSource, RemainingTargets } from "@/lib/types"
 import type { RecommendedPlate } from "@/lib/ai/plate-schema"
 import { usePrefs, useSavedPlates, useLoggedMeals } from "@/lib/store"
 import { estimateTargets, targetSourceNote } from "@/lib/nutrition/targets"
@@ -27,15 +27,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { cn } from "@/lib/utils"
-import {
-  GoalSelect,
-  ProfileFields,
-  DietChips,
-  AvoidInput,
-  formToPrefs,
-  prefsToForm,
-  type PrefsFormState,
-} from "@/components/settings/PreferencesFields"
+import GoalSummary from "@/components/home/GoalSummaryCard"
 import TodaysPick from "@/components/recommend/TodaysPick"
 import RecommendationGrid from "@/components/recommend/RecommendationGrid"
 import RecommendationLoading from "@/components/recommend/RecommendationLoading"
@@ -48,6 +40,7 @@ import {
   TrustBadge,
 } from "@/components/home/sidebar"
 import TodaysFuelCard from "@/components/home/TodaysFuelCard"
+import MealLogDialog, { draftFromPlate, type MealDraft } from "@/components/log/MealLogDialog"
 
 /** Format today's date the way /api/menu expects: M/D/YYYY. */
 function todayMenuDate(): string {
@@ -102,13 +95,8 @@ export default function HomePage() {
   const [menuError, setMenuError] = useState<string | null>(null)
   const [reloadKey, setReloadKey] = useState(0)
 
-  // Preferences — seeded from saved prefs, editable here before generating.
-  const { prefs, setPrefs } = usePrefs()
-  const [prefsForm, setPrefsForm] = useState<PrefsFormState>(() => prefsToForm(prefs))
-
-  useEffect(() => {
-    setPrefsForm(prefsToForm(prefs))
-  }, [prefs])
+  // Preferences come from Settings (the single source of truth).
+  const { prefs } = usePrefs()
 
   // Quick filters (session only)
   const [filters, setFilters] = useState<string[]>([])
@@ -117,9 +105,13 @@ export default function HomePage() {
   const { savePlate, removePlate, isSaved } = useSavedPlates()
 
   // Logged meals (localStorage) — owned here so logging updates Today's Fuel instantly.
-  const { logMeal, getTodayMeals, getTotalsForDate } = useLoggedMeals()
+  const { addLoggedMeal, getTodayMeals, getTotalsForDate } = useLoggedMeals()
   const todayMeals = getTodayMeals()
   const todayTotals = getTotalsForDate(getLocalDateKey())
+
+  // Portion-adjust dialog before logging a recommendation.
+  const [logDraft, setLogDraft] = useState<MealDraft | null>(null)
+  const [logOpen, setLogOpen] = useState(false)
 
   // Results
   const [plates, setPlates] = useState<RecommendedPlate[] | null>(null)
@@ -131,11 +123,9 @@ export default function HomePage() {
   const hasSelection = Boolean(hallId && meal)
   const canSubmit = Boolean(hasSelection && menuReady) && !isLoading && !isMenuLoading
 
-  // Derived preferences + estimated targets (recomputed as the form changes).
-  const currentPrefs = formToPrefs(prefsForm)
-  const targets = estimateTargets(currentPrefs.goal, currentPrefs.profile, currentPrefs.calorieTarget)
-  const targetNote = targetSourceNote(targets, currentPrefs.profile)
-  const prefsDirty = JSON.stringify(currentPrefs) !== JSON.stringify(prefs)
+  // Estimated daily targets from saved preferences.
+  const targets = estimateTargets(prefs.goal, prefs.profile, prefs.calorieTarget)
+  const targetNote = targetSourceNote(targets, prefs.profile)
 
   // Room left for the rest of today (targets − what's already logged). Values may
   // go negative when over a target; we clamp only where we *display* them.
@@ -157,11 +147,6 @@ export default function HomePage() {
     setFilters((prev) => (prev.includes(id) ? prev.filter((f) => f !== id) : [...prev, id]))
   }
 
-  const saveAsDefault = () => {
-    setPrefs(currentPrefs)
-    toast.success("Saved as your default preferences")
-  }
-
   const toggleSave = (plate: RecommendedPlate) => {
     if (isSaved(plate.id)) {
       removePlate(plate.id)
@@ -174,8 +159,13 @@ export default function HomePage() {
 
   const handleLogMeal = (plate: RecommendedPlate) => {
     if (!hall || !meal) return
-    logMeal(plate, { hall: hall.name, meal: formatMealPeriod(meal) })
-    toast.success(`Logged "${plate.title}" for today.`)
+    setLogDraft(draftFromPlate(plate, hall.name, formatMealPeriod(meal)))
+    setLogOpen(true)
+  }
+
+  const handleConfirmLog = (loggedMeal: Omit<LoggedMeal, "id" | "loggedAt">) => {
+    addLoggedMeal(loggedMeal)
+    toast.success(`Logged "${loggedMeal.title}" for today.`)
   }
 
   // Load the live menu whenever a hall + meal are both selected (or on retry).
@@ -244,7 +234,7 @@ export default function HomePage() {
           hall: hallId,
           meal,
           menuItems,
-          userPrefs: currentPrefs,
+          userPrefs: prefs,
           macroTargets: targets,
           filters,
           // Remaining-day context (backward-compatible; omitted fields are fine).
@@ -315,14 +305,19 @@ export default function HomePage() {
       <div className="grid gap-6 lg:grid-cols-3">
         {/* Main */}
         <div className="space-y-6 lg:col-span-2">
-          {/* Step 1: personalize */}
+          {/* Step 1: review today's goal (managed in Settings) */}
           <Card>
             <CardHeader>
-              <StepTitle n={1} title="Personalize your plate" icon={Target} />
+              <StepTitle n={1} title="Review today's goal" icon={Target} />
             </CardHeader>
-            <CardContent className="space-y-5">
-              <GoalSelect value={prefsForm} onChange={setPrefsForm} />
-              <ProfileFields value={prefsForm} onChange={setPrefsForm} />
+            <CardContent>
+              <GoalSummary
+                goal={prefs.goal}
+                targets={targets}
+                diets={prefs.diets}
+                avoid={prefs.avoid}
+                note={targetNote}
+              />
             </CardContent>
           </Card>
 
@@ -367,16 +362,17 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          {/* Step 3: preferences + filters */}
+          {/* Step 3: quick filters (session-only intent) */}
           <Card>
             <CardHeader>
-              <StepTitle n={3} title="Preferences & filters" icon={Leaf} />
+              <StepTitle n={3} title="Choose quick filters" icon={Leaf} />
             </CardHeader>
             <CardContent className="space-y-5">
-              <DietChips value={prefsForm} onChange={setPrefsForm} />
-              <AvoidInput value={prefsForm} onChange={setPrefsForm} />
               <div className="space-y-1.5">
                 <Label>Quick filters</Label>
+                <p className="text-xs text-muted-foreground">
+                  Optional, just for this search — your saved diet preferences always apply.
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {QUICK_FILTERS.map((f) => {
                     const active = filters.includes(f.id)
@@ -405,14 +401,6 @@ export default function HomePage() {
 
           {/* CTA */}
           <div className="space-y-2">
-            {prefsDirty && (
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-md bg-muted/60 px-3 py-2 text-sm">
-                <span className="text-muted-foreground">Using custom preferences for this session.</span>
-                <Button variant="outline" size="sm" onClick={saveAsDefault}>
-                  Save as default
-                </Button>
-              </div>
-            )}
             <Button className="w-full gap-2 shadow-sm" size="lg" disabled={!canSubmit} onClick={getRecommendations}>
               {isLoading ? (
                 <>
@@ -521,6 +509,14 @@ export default function HomePage() {
           <TrustBadge />
         </aside>
       </div>
+
+      <MealLogDialog
+        mode="create"
+        open={logOpen}
+        onOpenChange={setLogOpen}
+        draft={logDraft}
+        onConfirm={handleConfirmLog}
+      />
     </div>
   )
 }

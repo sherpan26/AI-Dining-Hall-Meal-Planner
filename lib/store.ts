@@ -18,7 +18,6 @@ import {
   type SavedPlate,
   type UserPrefs,
 } from "@/lib/types"
-import type { RecommendedPlate } from "@/lib/ai/plate-schema"
 import { getLocalDateKey } from "@/lib/date"
 
 /** localStorage keys owned by this module. */
@@ -183,16 +182,12 @@ export function useSavedPlates(): UseSavedPlatesResult {
 // Logged meals (Daily Log)
 // ---------------------------------------------------------------------------
 
-/** Metadata captured at log time (the hall/meal the plate came from). */
-export interface LogMealMeta {
-  hall: string
-  meal: string
-}
-
 export interface UseLoggedMealsResult {
   loggedMeals: LoggedMeal[]
-  /** Log a recommended plate as eaten today. Allows duplicates intentionally. */
-  logMeal: (plate: RecommendedPlate, meta: LogMealMeta) => LoggedMeal
+  /** Add a fully-formed logged meal (id + loggedAt are assigned here). */
+  addLoggedMeal: (meal: Omit<LoggedMeal, "id" | "loggedAt">) => LoggedMeal
+  /** Patch an existing logged meal in place (keeps id + loggedAt). */
+  updateLoggedMeal: (id: string, patch: Partial<Omit<LoggedMeal, "id" | "loggedAt">>) => void
   removeLoggedMeal: (id: string) => void
   clearLoggedMealsForDate: (date: string) => void
   getMealsForDate: (date: string) => LoggedMeal[]
@@ -208,28 +203,18 @@ export interface UseLoggedMealsResult {
 export function useLoggedMeals(): UseLoggedMealsResult {
   const [loggedMeals, setLoggedMeals] = useLocalStorageState<LoggedMeal[]>(STORAGE_KEYS.loggedMeals, [])
 
-  const logMeal = useCallback(
-    (plate: RecommendedPlate, meta: LogMealMeta) => {
-      const entry: LoggedMeal = {
-        id: newId(),
-        plateId: plate.id,
-        title: plate.title,
-        hall: meta.hall,
-        meal: meta.meal,
-        date: getLocalDateKey(),
-        loggedAt: new Date().toISOString(),
-        items: plate.items,
-        totals: {
-          calories: plate.totals.calories,
-          protein: plate.totals.protein,
-          carbs: plate.totals.carbs,
-          fat: plate.totals.fat,
-        },
-        tags: plate.tags,
-        warnings: plate.warnings,
-      }
+  const addLoggedMeal = useCallback(
+    (meal: Omit<LoggedMeal, "id" | "loggedAt">) => {
+      const entry: LoggedMeal = { ...meal, id: newId(), loggedAt: new Date().toISOString() }
       setLoggedMeals((prev) => [entry, ...prev])
       return entry
+    },
+    [setLoggedMeals],
+  )
+
+  const updateLoggedMeal = useCallback(
+    (id: string, patch: Partial<Omit<LoggedMeal, "id" | "loggedAt">>) => {
+      setLoggedMeals((prev) => prev.map((m) => (m.id === id ? { ...m, ...patch } : m)))
     },
     [setLoggedMeals],
   )
@@ -282,7 +267,8 @@ export function useLoggedMeals(): UseLoggedMealsResult {
 
   return {
     loggedMeals,
-    logMeal,
+    addLoggedMeal,
+    updateLoggedMeal,
     removeLoggedMeal,
     clearLoggedMealsForDate,
     getMealsForDate,

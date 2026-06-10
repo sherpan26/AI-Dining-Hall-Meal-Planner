@@ -1,22 +1,32 @@
 "use client"
 
-import { Clock, Trash2 } from "lucide-react"
+import { Clock, Pencil, Trash2 } from "lucide-react"
 import type { LoggedMeal } from "@/lib/types"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { formatFoodName } from "@/lib/utils"
 
-/** One logged (eaten) meal with macros, metadata, items, and a remove action. */
+const fmtQty = (q: number) => (Number.isInteger(q) ? String(q) : q.toFixed(1))
+
+/** One logged (eaten) meal with macros, metadata, items, and edit/remove actions. */
 export default function LoggedMealCard({
   meal,
   onRemove,
+  onEdit,
 }: {
   meal: LoggedMeal
   onRemove: (id: string) => void
+  /** If provided, an edit button opens the portion dialog. */
+  onEdit?: (meal: LoggedMeal) => void
 }) {
   const time = new Date(meal.loggedAt).toLocaleTimeString(undefined, { hour: "numeric", minute: "2-digit" })
   const t = meal.totals
+
+  // Items actually eaten (quantity > 0), with a ×N suffix when not a single serving.
+  const eaten = meal.items
+    .map((it, idx) => ({ name: it.name, qty: meal.quantities?.[idx] ?? 1 }))
+    .filter((i) => i.qty > 0)
 
   return (
     <Card>
@@ -37,15 +47,28 @@ export default function LoggedMealCard({
               </span>
             </div>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
-            aria-label={`Remove ${meal.title} from your log`}
-            onClick={() => onRemove(meal.id)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
+          <div className="flex shrink-0 items-center">
+            {onEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                aria-label={`Edit ${meal.title}`}
+                onClick={() => onEdit(meal)}
+              >
+                <Pencil className="h-4 w-4" />
+              </Button>
+            )}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+              aria-label={`Remove ${meal.title} from your log`}
+              onClick={() => onRemove(meal.id)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
 
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs tabular-nums">
@@ -55,9 +78,13 @@ export default function LoggedMealCard({
           <span className="text-muted-foreground">{Math.round(t.fat)}g fat</span>
         </div>
 
-        {meal.items.length > 0 && (
-          <p className="text-xs text-muted-foreground">{meal.items.map((i) => formatFoodName(i.name)).join(" · ")}</p>
+        {eaten.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            {eaten.map((i) => `${formatFoodName(i.name)}${i.qty !== 1 ? ` ×${fmtQty(i.qty)}` : ""}`).join(" · ")}
+          </p>
         )}
+
+        {meal.note && <p className="text-xs italic text-muted-foreground">“{meal.note}”</p>}
       </CardContent>
     </Card>
   )

@@ -7,7 +7,7 @@ import { format } from "date-fns"
 import { toast } from "sonner"
 import { useSavedPlates, useLoggedMeals } from "@/lib/store"
 import { getDiningHallById, formatMealPeriod } from "@/lib/dining-halls"
-import type { SavedPlate } from "@/lib/types"
+import type { LoggedMeal, SavedPlate } from "@/lib/types"
 import type { RecommendedPlate } from "@/lib/ai/plate-schema"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import SavedPlateCard from "@/components/saved/SavedPlateCard"
+import MealLogDialog, { draftFromPlate, type MealDraft } from "@/components/log/MealLogDialog"
 
 // Reasonable, simple thresholds for the tag-light filters.
 const HIGH_PROTEIN_G = 30
@@ -97,11 +98,15 @@ export default function SavedPage() {
   useEffect(() => setMounted(true), [])
 
   const { savedPlates, removePlate } = useSavedPlates()
-  const { logMeal, loggedMeals } = useLoggedMeals()
+  const { addLoggedMeal, loggedMeals } = useLoggedMeals()
 
   const [query, setQuery] = useState("")
   const [filter, setFilter] = useState<FilterId>("all")
   const [sort, setSort] = useState<SortId>("newest")
+
+  // Portion-adjust dialog before logging from the library.
+  const [logDraft, setLogDraft] = useState<MealDraft | null>(null)
+  const [logOpen, setLogOpen] = useState(false)
 
   const count = savedPlates.length
 
@@ -161,8 +166,13 @@ export default function SavedPage() {
 
   const handleLog = (plate: RecommendedPlate) => {
     const hall = getDiningHallById(plate.hall)
-    logMeal(plate, { hall: hall?.name ?? plate.hall, meal: formatMealPeriod(plate.meal) })
-    toast.success(`Logged "${plate.title}" for today.`)
+    setLogDraft(draftFromPlate(plate, hall?.name ?? plate.hall, formatMealPeriod(plate.meal)))
+    setLogOpen(true)
+  }
+
+  const handleConfirmLog = (meal: Omit<LoggedMeal, "id" | "loggedAt">) => {
+    addLoggedMeal(meal)
+    toast.success(`Logged "${meal.title}" for today.`)
   }
 
   const handleRemove = (id: string) => {
@@ -287,6 +297,14 @@ export default function SavedPage() {
           )}
         </>
       )}
+
+      <MealLogDialog
+        mode="create"
+        open={logOpen}
+        onOpenChange={setLogOpen}
+        draft={logDraft}
+        onConfirm={handleConfirmLog}
+      />
     </div>
   )
 }

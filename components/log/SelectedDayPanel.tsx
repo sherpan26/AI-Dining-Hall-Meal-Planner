@@ -29,6 +29,7 @@ interface SelectedDayPanelProps {
   /** Short note on where the targets came from, e.g. "From your goal". */
   note: string
   onRemoveMeal: (id: string) => void
+  onEditMeal: (meal: LoggedMeal) => void
   onClearDay: () => void
 }
 
@@ -40,6 +41,7 @@ export default function SelectedDayPanel({
   targets,
   note,
   onRemoveMeal,
+  onEditMeal,
   onClearDay,
 }: SelectedDayPanelProps) {
   const today = isToday(dateKey)
@@ -116,7 +118,7 @@ export default function SelectedDayPanel({
 
           <div className="grid gap-3">
             {meals.map((m) => (
-              <LoggedMealCard key={m.id} meal={m} onRemove={onRemoveMeal} />
+              <LoggedMealCard key={m.id} meal={m} onRemove={onRemoveMeal} onEdit={onEditMeal} />
             ))}
           </div>
         </>

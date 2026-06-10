@@ -167,10 +167,19 @@ export interface LoggedMeal {
   date: string
   /** ISO timestamp when it was logged. */
   loggedAt: string
+  /** Per-unit items (nutrition is for a single serving; multiply by `quantities`). */
   items: PlateItem[]
+  /**
+   * Eaten quantity per item, aligned to `items` (0, 0.5, 1, …). Optional for
+   * backward compatibility — older logs omit it and are treated as all 1×.
+   */
+  quantities?: number[]
+  /** Adjusted totals (sum of each item's nutrition × its quantity). */
   totals: MacroTotals
   tags?: string[]
   warnings?: string[]
+  /** Optional free-text note the user added when logging/editing. */
+  note?: string
 }
 
 // ---------------------------------------------------------------------------
