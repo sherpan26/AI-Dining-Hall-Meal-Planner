@@ -1,9 +1,11 @@
 import { AlertTriangle, Bookmark, BookmarkCheck, Plus } from "lucide-react"
 import type { RecommendedPlate, PlateNutrition } from "@/lib/ai/plate-schema"
+import type { RemainingTargets } from "@/lib/types"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { cn, formatFoodName } from "@/lib/utils"
+import TodayFitNote from "@/components/recommend/TodayFitNote"
 
 /** Compact per-item macros, e.g. "220 cal · 25P / 0C / 6F". */
 function itemMacros(n: PlateNutrition): string {
@@ -27,6 +29,8 @@ interface PlateCardProps {
   onToggleSave?: (plate: RecommendedPlate) => void
   /** If provided, a "Log meal" button is shown (logs the plate as eaten). */
   onLogMeal?: (plate: RecommendedPlate) => void
+  /** Remaining daily room today; when set, a "Today fit" note is shown. */
+  remaining?: RemainingTargets
 }
 
 export default function PlateCard({
@@ -35,6 +39,7 @@ export default function PlateCard({
   saved = false,
   onToggleSave,
   onLogMeal,
+  remaining,
 }: PlateCardProps) {
   return (
     <Card className={cn("flex flex-col", highlight && "border-primary/60 shadow-sm ring-1 ring-primary/20")}>
@@ -119,6 +124,8 @@ export default function PlateCard({
         </div>
 
         {plate.rationale && <p className="text-sm text-muted-foreground">{plate.rationale}</p>}
+
+        {remaining && <TodayFitNote remaining={remaining} plate={plate.totals} />}
 
         {/* Footer: warnings + log action, pinned to the bottom for aligned cards. */}
         <div className="mt-auto space-y-3">

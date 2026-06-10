@@ -7,7 +7,7 @@
  */
 
 import { formatMealPeriod, type DiningHall } from "@/lib/dining-halls"
-import type { MacroTargets, MenuItem, UserPrefs } from "@/lib/types"
+import type { MacroTargets, MacroTotals, MenuItem, RemainingTargets, UserPrefs } from "@/lib/types"
 
 /** Default cap on the number of menu items sent to the model. */
 export const DEFAULT_MENU_ITEM_LIMIT = 60
@@ -28,6 +28,12 @@ export interface RecommendPromptInput {
   prefs: UserPrefs
   /** Optional estimated daily targets to anchor the meal's macros. */
   macroTargets?: MacroTargets
+  /** Optional totals the user has already logged today. */
+  todayTotals?: MacroTotals
+  /** Optional remaining room for the rest of today (targets − todayTotals; may be negative). */
+  remainingTargets?: RemainingTargets
+  /** How many meals the user has already logged today. */
+  loggedMealCountToday?: number
   /** Optional extra filter labels selected in the UI (e.g. "high-protein"). */
   filters?: string[]
   /** Max menu items to include in the prompt. */
@@ -86,7 +92,8 @@ export function summarizeMenu(menuItems: MenuItem[], limit: number = DEFAULT_MEN
 
 /** Build the structured-output prompt asking Gemini for 3 plates from the real menu. */
 export function buildRecommendationPrompt(input: RecommendPromptInput): string {
-  const { hall, meal, menuItems, prefs, macroTargets, filters, menuItemLimit } = input
+  const { hall, meal, menuItems, prefs, macroTargets, todayTotals, remainingTargets, loggedMealCountToday, filters, menuItemLimit } =
+    input
 
   const prefLines: string[] = [
     `- Goal: ${GOAL_LABELS[prefs.goal] ?? prefs.goal}`,
@@ -111,6 +118,35 @@ export function buildRecommendationPrompt(input: RecommendPromptInput): string {
     ].join("\n")
   }
 
+  // When the user has already logged meals today, the room left for the rest of
+  // the day becomes the PRIMARY nutrition context (best *next* meal, not just a
+  // generic daily-target meal).
+  let remainingLines = ""
+  const r = (n: number) => Math.round(n)
+  if (remainingTargets && (loggedMealCountToday ?? 0) > 0) {
+    remainingLines = [
+      ``,
+      `Today's progress — the student has already logged ${loggedMealCountToday} meal(s) today:`,
+      todayTotals
+        ? `- Eaten so far: ~${r(todayTotals.calories)} kcal, ${r(todayTotals.protein)}g protein, ${r(
+            todayTotals.carbs,
+          )}g carbs, ${r(todayTotals.fat)}g fat`
+        : "",
+      `- Remaining for the rest of today: ~${r(remainingTargets.calories)} kcal, ${r(remainingTargets.protein)}g protein, ${r(
+        remainingTargets.carbs,
+      )}g carbs, ${r(remainingTargets.fat)}g fat (a negative value means they are already over that target)`,
+      ``,
+      `Use these REMAINING targets as the primary nutrition context. Recommend the best next meal for the rest of the student's day:`,
+      `- If remaining calories are low, prefer lighter, high-protein, high-volume plates.`,
+      `- If remaining protein is high, prioritize protein-dense plates.`,
+      `- If remaining carbs or fat are low, avoid plates that heavily exceed those remaining amounts.`,
+      `- If the student is already over a target, do NOT shame them — simply recommend balanced options that keep the rest of their day on track.`,
+      `- Do not force plates to hit the remaining targets exactly; choose realistic dining hall plates that move the student closer to their goal.`,
+    ]
+      .filter(Boolean)
+      .join("\n")
+  }
+
   const menuSummary = summarizeMenu(menuItems, menuItemLimit)
 
   return [
@@ -121,6 +157,7 @@ export function buildRecommendationPrompt(input: RecommendPromptInput): string {
     `Student preferences:`,
     prefLines.join("\n"),
     targetLines,
+    remainingLines,
     ``,
     `Today's menu (use ONLY these items — do not invent dishes):`,
     menuSummary,
@@ -130,7 +167,9 @@ export function buildRecommendationPrompt(input: RecommendPromptInput): string {
     `- Menu annotations: [..] = per-item macros, {..} = dietary tags, (contains ..) = allergens.`,
     `- STRICTLY exclude any item whose allergens or contents conflict with the user's dietary restrictions or avoid list; prefer items whose dietary tags match the user's diets.`,
     `- When an item lists macros, use those exact values; otherwise estimate. Each plate's totals must sum its items' macros.`,
-    `- Bias choices toward the student's goal and the per-meal targets above.`,
+    remainingLines
+      ? `- Bias choices toward the student's goal and, above all, the REMAINING targets for the rest of today.`
+      : `- Bias choices toward the student's goal and the per-meal targets above.`,
     `- Each rationale (1-2 sentences) must explain how the plate supports the student's goal.`,
     `- Add concise tags (e.g. "high-protein", "vegetarian") and any relevant allergen/diet warnings.`,
   ].join("\n")

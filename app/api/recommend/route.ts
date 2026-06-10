@@ -52,6 +52,14 @@ const macroTargetsSchema = z.object({
   source: z.enum(["manual", "calculated"]),
 })
 
+/** Plain calorie/macro totals (today's logged totals / remaining room). May be negative. */
+const macroTotalsSchema = z.object({
+  calories: z.number(),
+  protein: z.number(),
+  carbs: z.number(),
+  fat: z.number(),
+})
+
 const requestSchema = z.object({
   /** Hall id ("busch") or display name ("Busch Dining Hall"). */
   hall: z.string().min(1),
@@ -60,6 +68,10 @@ const requestSchema = z.object({
   userPrefs: userPrefsSchema.optional(),
   macroTargets: macroTargetsSchema.optional(),
   filters: z.array(z.string()).optional(),
+  // Optional "remaining day" context — older clients omit these.
+  todayTotals: macroTotalsSchema.optional(),
+  remainingTargets: macroTotalsSchema.optional(),
+  loggedMealCountToday: z.number().int().nonnegative().optional(),
 })
 
 function jsonError(message: string, status: number, details?: unknown) {
@@ -81,7 +93,8 @@ export async function POST(req: Request) {
   if (!parsed.success) {
     return jsonError("Invalid request", 400, parsed.error.flatten())
   }
-  const { hall: hallKey, meal, menuItems, userPrefs, macroTargets, filters } = parsed.data
+  const { hall: hallKey, meal, menuItems, userPrefs, macroTargets, filters, todayTotals, remainingTargets, loggedMealCountToday } =
+    parsed.data
 
   // 2. Resolve the dining hall (accept id or display name).
   const hall = getDiningHallById(hallKey) ?? getDiningHallByName(hallKey)
@@ -112,6 +125,9 @@ export async function POST(req: Request) {
     menuItems: menuItems as MenuItem[],
     prefs,
     macroTargets,
+    todayTotals,
+    remainingTargets,
+    loggedMealCountToday,
     filters,
   })
 

@@ -147,6 +147,12 @@ export interface MacroTotals {
 }
 
 /**
+ * Daily targets minus what's already been logged today — the room left for the
+ * rest of the day. Values may be negative when the user is over a target.
+ */
+export type RemainingTargets = MacroTotals
+
+/**
  * A meal the user actually ate, counted toward their daily nutrition.
  * Distinct from `SavedPlate` (a bookmark for later).
  */

@@ -17,7 +17,7 @@ import {
   WheatOff,
 } from "lucide-react"
 import { DINING_HALLS, getDiningHallById, formatMealPeriod } from "@/lib/dining-halls"
-import type { MenuItem, MenuSource } from "@/lib/types"
+import type { MenuItem, MenuSource, RemainingTargets } from "@/lib/types"
 import type { RecommendedPlate } from "@/lib/ai/plate-schema"
 import { usePrefs, useSavedPlates, useLoggedMeals } from "@/lib/store"
 import { estimateTargets, targetSourceNote } from "@/lib/nutrition/targets"
@@ -137,6 +137,17 @@ export default function HomePage() {
   const targetNote = targetSourceNote(targets, currentPrefs.profile)
   const prefsDirty = JSON.stringify(currentPrefs) !== JSON.stringify(prefs)
 
+  // Room left for the rest of today (targets − what's already logged). Values may
+  // go negative when over a target; we clamp only where we *display* them.
+  const loggedMealCountToday = todayMeals.length
+  const hasLoggedToday = loggedMealCountToday > 0
+  const remainingTargets: RemainingTargets = {
+    calories: targets.calories - todayTotals.calories,
+    protein: targets.protein - todayTotals.protein,
+    carbs: targets.carbs - todayTotals.carbs,
+    fat: targets.fat - todayTotals.fat,
+  }
+
   const handleHallChange = (value: string) => {
     setHallId(value)
     setMeal("")
@@ -236,6 +247,10 @@ export default function HomePage() {
           userPrefs: currentPrefs,
           macroTargets: targets,
           filters,
+          // Remaining-day context (backward-compatible; omitted fields are fine).
+          todayTotals,
+          remainingTargets,
+          loggedMealCountToday,
         }),
       })
 
@@ -407,12 +422,20 @@ export default function HomePage() {
               ) : (
                 <>
                   <Sparkles className="h-4 w-4" />
-                  Get Recommendations
+                  {hasLoggedToday ? "Get recommendations for the rest of today" : "Get Recommendations"}
                   <ArrowRight className="h-4 w-4" />
                 </>
               )}
             </Button>
             {!canSubmit && !isLoading && <p className="text-center text-xs text-muted-foreground">{disabledHint}</p>}
+            {hasLoggedToday && !isLoading && (
+              <p className="text-center text-xs text-muted-foreground">
+                Based on your remaining{" "}
+                <span className="tabular-nums">{Math.max(0, Math.round(remainingTargets.calories)).toLocaleString()}</span>{" "}
+                kcal and <span className="tabular-nums">{Math.max(0, Math.round(remainingTargets.protein))}</span>g protein
+                today.
+              </p>
+            )}
           </div>
 
           {/* Results — the main product moment */}
@@ -433,22 +456,31 @@ export default function HomePage() {
                 <p className="text-sm text-muted-foreground">
                   {hall?.name} · {formatMealPeriod(meal)} · tailored to your goal
                 </p>
-                <p className="text-xs text-muted-foreground">
-                  Aiming for ~{Math.round(targets.calories / 3)} kcal this meal (about a third of your ~
-                  {targets.calories} kcal/day estimate).
-                </p>
+                {hasLoggedToday ? (
+                  <p className="text-xs text-muted-foreground">
+                    Tuned to your remaining ~{Math.max(0, Math.round(remainingTargets.calories)).toLocaleString()} kcal and{" "}
+                    {Math.max(0, Math.round(remainingTargets.protein))}g protein for the rest of today.
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Aiming for ~{Math.round(targets.calories / 3)} kcal this meal (about a third of your ~
+                    {targets.calories} kcal/day estimate).
+                  </p>
+                )}
               </div>
               <TodaysPick
                 plate={plates[0]}
                 saved={isSaved(plates[0].id)}
                 onToggleSave={toggleSave}
                 onLogMeal={handleLogMeal}
+                remaining={hasLoggedToday ? remainingTargets : undefined}
               />
               <RecommendationGrid
                 plates={plates.slice(1)}
                 isSaved={isSaved}
                 onToggleSave={toggleSave}
                 onLogMeal={handleLogMeal}
+                remaining={hasLoggedToday ? remainingTargets : undefined}
               />
             </section>
           )}

@@ -1,4 +1,5 @@
 import type { RecommendedPlate } from "@/lib/ai/plate-schema"
+import type { RemainingTargets } from "@/lib/types"
 import PlateCard from "@/components/recommend/PlateCard"
 
 interface RecommendationGridProps {
@@ -7,10 +8,17 @@ interface RecommendationGridProps {
   isSaved?: (id: string) => boolean
   onToggleSave?: (plate: RecommendedPlate) => void
   onLogMeal?: (plate: RecommendedPlate) => void
+  remaining?: RemainingTargets
 }
 
 /** Renders the remaining (non-pick) plate recommendations in a grid. */
-export default function RecommendationGrid({ plates, isSaved, onToggleSave, onLogMeal }: RecommendationGridProps) {
+export default function RecommendationGrid({
+  plates,
+  isSaved,
+  onToggleSave,
+  onLogMeal,
+  remaining,
+}: RecommendationGridProps) {
   if (plates.length === 0) return null
 
   return (
@@ -24,6 +32,7 @@ export default function RecommendationGrid({ plates, isSaved, onToggleSave, onLo
             saved={isSaved?.(plate.id)}
             onToggleSave={onToggleSave}
             onLogMeal={onLogMeal}
+            remaining={remaining}
           />
         ))}
       </div>
