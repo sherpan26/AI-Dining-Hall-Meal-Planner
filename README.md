@@ -2,7 +2,7 @@
 
 > AI-powered Rutgers dining assistant for meal recommendations, macro targets, and daily meal logging.
 
-**Live demo:** https://rutgers-dining.vercel.app
+**Live demo:** [(https://ai-dining-hall-meal-planner.vercel.app/)]
 
 Rutgers Dining AI helps Rutgers–New Brunswick students decide what to eat from the
 live dining hall menus. It pulls real menu data from Rutgers' Nutrislice and FoodPro
